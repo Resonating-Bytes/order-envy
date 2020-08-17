@@ -3,13 +3,7 @@
     <div class="centered">
         <h1>Restaurants</h1>
 
-        <% if (user) { %>
-            <div class="row new-item-form">
-                <div class="col-9 centered">
-                    <a href="/restaurants/new" class="btn btn-lg btn-primary">Add Restaurant</a>
-                </div>
-            </div>
-        <% } %>
+        <% include ../partials/newRestaurant %>
 
         <% restaurants.forEach((restaurant) => { %>
             <div class="row new-item-form">
@@ -20,6 +14,8 @@
                 </div>
             </div>
         <% }); %>
+
+        <% include ../partials/newRestaurant %>
 
         <% include ../partials/recommendList %>
     </div>
