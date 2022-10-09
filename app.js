@@ -27,6 +27,8 @@ const restaurantRoutes = require('./routes/restaurants');
 const restaurantCheckinRoutes = require('./routes/restaurantCheckin');
 const userRoutes = require('./routes/users');
 
+// switching stack
+
 app.use(express.static(__dirname + "/public"));
 app.use(express.static("./lib"));
 app.use(methodOverride('_method'));
