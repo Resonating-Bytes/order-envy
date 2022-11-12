@@ -54,6 +54,14 @@ form textarea {
     overflow: auto;
 }
 
+.rating-container {
+    margin-top: 15px;
+}
+
+.menuItem {
+    margin: 0;
+}
+
 .centered {
     margin: auto;
     text-align: center;
@@ -129,4 +137,8 @@ form textarea {
 
 .navigation {
     margin: 0 15px 0 15px;
+}
+
+.ratingButton {
+    margin-top: 20px;
 }

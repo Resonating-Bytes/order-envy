@@ -120,53 +120,59 @@
         </h2>
         <div class="menu-item-container">
             <% restaurant.getCategories().forEach((category) => { %>
-                <div class="row-spacer">
-                    <h3><%= category.label %></h3>
-                    <% category.menuItems.forEach((menuItem) => { %>
-                        <div class="container rating">
-                            <div class="row">
+                <div class="row">
+                    <div class="col-4">
+                        <h5><%= category.label %></h5>
+                    </div>
+                    <div class="col-8">
+                        <h5>Dish Name / Description</h5>
+                    </div>
+                </div>
+                <% category.menuItems.forEach((menuItem) => { %>
+                    <div class="container">
+                        <div class="row">
+                            <% if (user) { %>
+                                <div class="col-2">
+                                    <%
+                                        const avgRating = averageRating(menuItem.ratings, user);
+                                        if (typeof avgRating == 'number') {
+                                    %>
+                                            <% const ri = getRatingInfo(ratingInfo, avgRating) %>
+                                            <img src="<%= ri.img %>Small.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
+                                    <%
+                                        }
+                                    %>
+                                </div>
+                            <% } %>
+                            <div class="col-2">
                                 <% if (user) { %>
-                                    <div class="col-2">
-                                        <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>/ratings/new" class="btn btn-xs btn-outline-primary bg-light float-right">
-                                            <%
-                                                const avgRating = averageRating(menuItem.ratings, user);
-                                                if (typeof avgRating == 'number') {
-                                            %>
-                                                    <% const ri = getRatingInfo(ratingInfo, avgRating) %>
-                                                    <img src="<%= ri.img %>Small.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
-                                            <%
-                                                } else {
-                                            %>
-                                                <i class="fa-solid fa-plus"></i>
-                                            <%
-                                                }
-                                            %>
-                                        </a>
-                                    </div>
+                                <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>/ratings/new" class="btn btn-xs btn-outline-primary bg-light float-right ratingButton">
+                                    <i class="fa-solid fa-plus"></i>
+                                </a>
                                 <% } %>
-                                <div class="col">
-                                    <h4>
-                                        <div class="row">
-                                            <div class="col-11">
-                                                <%= menuItem.name %>
-                                            </div>
-                                            <div class="col-1">
-                                                <% if (user) { %>
-                                                <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>" title="See all ratings">
-                                                    <i class="fa-solid fa-circle-info"></i>
-                                                </a>
-                                                <% } %>
-                                            </div>
-                                        </div>
-                                    </h4>
-                                    <% if (menuItem.description) { %>
-                                        <%= limitText(menuItem.description, 45) %>
-                                    <% } %>
+                            </div>
+                            <div class="col-8">
+                                <div class="row">
+                                    <div class="col-10 rating-container">
+                                        <h4 class="menuItem">
+                                            <%= menuItem.name %>
+                                        </h4>
+                                        <% if (menuItem.description) { %>
+                                            <%= menuItem.description %>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-2 rating-container">
+                                        <% if (user) { %>
+                                        <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>" class="float-right" title="See all ratings">
+                                            <i class="fa-solid fa-circle-info"></i>
+                                        </a>
+                                        <% } %>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    <% }); %>
-                </div>
+                    </div>
+                <% }); %>
             <% }); %>
         </div>
     </div>

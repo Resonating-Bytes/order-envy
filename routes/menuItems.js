@@ -4,7 +4,7 @@ const router = express.Router({mergeParams: true});
 const isLoggedIn = require('../middleware/isLoggedIn');
 const { cacheRestaurant } = require('../middleware/restaurant');
 const { canEditMenuItem } = require('../middleware/menuItem');
-const { filterUserOwned, limitText, getRatingInfo } = require('../utils/misc');
+const { filterUserOwned, getRatingInfo } = require('../utils/misc');
 
 const MenuItem = require('../models/menuItem');
 const Note = require('../models/note');
@@ -63,7 +63,7 @@ router.get('/:menuItemID', cacheRestaurant, (req, res) => {
                     if (!('ratings' in res.locals)) {
                         res.locals.ratings = [];
                     }
-                    res.render('menuItems/show', { menuItem, filterUserOwned, note, limitText, getRatingInfo });
+                    res.render('menuItems/show', { menuItem, filterUserOwned, note, getRatingInfo });
                 }
             });
         }
