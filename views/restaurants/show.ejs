@@ -1,4 +1,4 @@
-<% include ../partials/header %>
+<%- include("../partials/header") %>
 
     <div class="row">
         <div class="col-2 centered">
@@ -42,7 +42,7 @@
                 <% } %>
             </div>
             <div class="col">
-                <% include ../partials/recommendDropdown %>
+                <%- include("../partials/recommendDropdown") %>
             </div>
         </div>
     <% } %>
@@ -94,10 +94,10 @@
         const baseRatingLink = `/restaurants/${restaurant._id}/ratings`;
         const ratings = filterUserOwned(user, restaurant.ratings); 
         %>
-        <% include ../partials/ratings %>
+        <%- include("../partials/ratings", {baseRatingLink, ratings}) %>
 
         <div class="float-right">
-            <% include ../partials/recommendList %>
+            <%- include("../partials/recommendList") %>
         </div>
 
         <hr class="spacer">
@@ -107,7 +107,7 @@
                 <div class="col-9">
                     Menu Items
                 </div>
-                <div class="col-3">
+                <div class="col-2">
                     <% if (user) { %>
                         <a href="/restaurants/<%= restaurant._id %>/menuItems/new" class="btn btn-xs btn-outline-primary bg-light">+</a>
                     <% } %>
@@ -122,14 +122,28 @@
                         <div class="container rating">
                             <div class="row">
                                 <% if (user) { %>
-                                    <div class="col-3">
-                                        <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>/ratings/new"
-                                            class="btn btn-xs btn-outline-primary bg-light float-right"><%- averageRating(menuItem.ratings, user) %></a>
+                                    <div class="col-2">
+                                        <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>/ratings/new" class="btn btn-xs btn-outline-primary bg-light float-right">
+                                            <%
+                                                const avgRating = averageRating(menuItem.ratings, user);
+                                                if (typeof avgRating == 'number') {
+                                            %>
+                                                    <img src="<%= ratingInfo[avgRating].img %>Small.png">
+                                            <%
+                                                } else {
+                                            %>
+                                                    <%= avgRating %>
+                                            <%
+                                                }
+                                            %>
+                                        </a>
                                     </div>
                                 <% } %>
                                 <div class="col">
                                     <h4>
-                                        <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>"><%= menuItem.name %></a>
+                                        <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>">
+                                            <%= menuItem.name %>
+                                        </a>
                                     </h4>
                                 </div>
                             </div>
@@ -149,4 +163,4 @@
 
     <script type="text/javascript" src="/script/dropdownHandler.js"></script>
 
-<% include ../partials/footer %>
+<%- include("../partials/footer") %>

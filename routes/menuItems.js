@@ -60,8 +60,10 @@ router.get('/:menuItemID', cacheRestaurant, (req, res) => {
                     console.error(`Error fetching note: ${err.message}`);
                     return res.redirect(`/restaurants`);
                 } else {
-                    const { restaurant } = res.locals;
-                    res.render('menuItems/show', { menuItem, restaurant, filterUserOwned, note, limitText });
+                    if (!('ratings' in res.locals)) {
+                        res.locals.ratings = [];
+                    }
+                    res.render('menuItems/show', { menuItem, filterUserOwned, note, limitText });
                 }
             });
         }

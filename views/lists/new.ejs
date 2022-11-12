@@ -1,4 +1,4 @@
-<% include ../partials/header %>
+<%- include("../partials/header") %>
 
     <div style="text-align:center">
         <h1>Create a new list</h1>
@@ -10,8 +10,8 @@
                 <input class="form-control" type="text" name="list[name]" placeholder="List name" autofocus>
             </div>
 
-            <% include ../partials/formButtons %>
+            <%- include("../partials/formButtons") %>
         </form>
     </div>
 
-<% include ../partials/footer %>
+<%- include("../partials/footer") %>

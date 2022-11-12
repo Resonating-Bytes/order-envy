@@ -66,9 +66,14 @@ router.post('/login', passport.authenticate('local', {
     // nothing to actually do, user will be redirected on success or failure
 });
 
+function logoutCB(error)
+{
+    console.error(error);
+}
+
 router.get('/logout', (req, res) => {
     // this will trash the current session
-    req.logout();
+    req.logout({keepSessionInfo: false}, logoutCB);
 
     req.flash(`success`, `Logged you out!`);
 

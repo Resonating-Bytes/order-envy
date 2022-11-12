@@ -112,7 +112,7 @@ function averageRating(ratings, user) {
         }
     }
 
-    return (count ? Math.round(total / count * 10) / 10 : '+');
+    return (count ? Math.round(total / count) : '+');
 }
 
 // 'show' route
@@ -137,6 +137,9 @@ router.get('/:restaurantID', (req, res) => {
                                     console.error(`Error fetching note: ${err.message}`);
                                     return res.redirect(`/restaurants`);
                                 } else {
+                                    if (!('ratings' in res.locals)) {
+                                        res.locals.ratings = [];
+                                    }
                                     res.render('restaurants/show', { restaurant, averageRating, filterUserOwned, lists, recommendations, note, limitText });
                                 }
                             });

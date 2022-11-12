@@ -68,6 +68,33 @@ app.use((req, res, next) => {
     res.locals.error = req.flash('error');
     res.locals.warning = req.flash('warning');
     res.locals.success = req.flash('success');
+    res.locals.ratingInfo = [
+        {
+            img: "/img/vomit",
+            alt: "Vomit",
+            title: "Pretty sure this gave me food poisoning",
+        },
+        {
+            img: "/img/frowning",
+            alt: "Frowning",
+            title: "Only worth eating to survive long enough to find something better",
+        },
+        {
+            img: "/img/neutral",
+            alt: "Neutral",
+            title: "Not worth getting again if there is another option to try",
+        },
+        {
+            img: "/img/happy",
+            alt: "Happy",
+            title: "Always a solid choice to put this in your food hole",
+        },
+        {
+            img: "/img/perfect",
+            alt: "Perfect",
+            title: "You may have died and went to taste bud heaven, why get anything else ever???",
+        }
+    ];
 
     // pull the user from the DB so we can populate fields properly
     User.findById((req.user || {})._id).populate('friends').exec((err, user) => {

@@ -1,9 +1,9 @@
-<% include ../partials/header %>
+<%- include("../partials/header") %>
 
     <div class="centered">
         <h1>Restaurants</h1>
 
-        <% include ../partials/newRestaurant %>
+        <%- include("../partials/newRestaurant") %>
 
         <% restaurants.forEach((restaurant) => { %>
             <div class="row new-item-form">
@@ -15,9 +15,11 @@
             </div>
         <% }); %>
 
-        <% include ../partials/newRestaurant %>
+        <% if (restaurants.length > 5) { %>
+            <%- include("../partials/newRestaurant") %>
+        <% } %>
 
-        <% include ../partials/recommendList %>
+        <%- include("../partials/recommendList") %>
     </div>
 
-<% include ../partials/footer %>
+<%- include("../partials/footer") %>

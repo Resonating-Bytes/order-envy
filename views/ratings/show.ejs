@@ -1,4 +1,4 @@
-<% include ../partials/header %>
+<%- include("../partials/header") %>
 
     <div class="page-header">
         Rating for:
@@ -17,11 +17,11 @@
          <% if (user) { %>
             <div class="col">
                 <div class="row">
-                    <div class="col-5"></div>
+                    <div class="col-6"></div>
                     <div class="col-3">
                         <a href="<%= restaurantRoute %><%= menuItemRoute %>/ratings/<%= rating._id %>/edit" class="btn btn-warning">Edit</a>
                     </div>
-                    <div class="col-4">
+                    <div class="col-3">
                         <form class="delete-item" action="<%= restaurantRoute %><%= menuItemRoute %>/ratings/<%= rating._id %>?_method=DELETE" method="POST">
                             <button class="btn btn-danger">Delete</button>
                         </form>
@@ -58,4 +58,4 @@
         </div>
     </div>
 
-<% include ../partials/footer %>
+<%- include("../partials/footer") %>

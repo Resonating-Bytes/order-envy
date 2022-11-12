@@ -1,0 +1,13 @@
+<table class="centered">
+    <tr>
+        <% for (let i = 0; i < ratingInfo.length; i++) { %>
+            <% const ri = ratingInfo[i]; %>
+            <td class="centered">
+                <label>
+                    <input type="radio" name="rating[rating]" value="<%= i %>" <% if ('rating' in this && rating.rating == i) { %>checked<% } %>>
+                    <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
+                </label>
+            </td>
+        <% } %>
+    </tr>
+</table>

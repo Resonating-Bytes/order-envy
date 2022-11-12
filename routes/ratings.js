@@ -23,17 +23,18 @@ router.get('/new', isLoggedIn, cacheRestaurant, cacheMenuItem, (req, res) => {
     const { menuItem, restaurant } = res.locals;
     const restaurantRoute = (restaurant ? `/restaurants/${restaurant._id}` : ``);
     const menuItemRoute = (menuItem ? `/menuItems/${menuItem._id}` : ``);
-    res.render(`ratings/new`, { restaurantRoute, menuItemRoute });
+    const rating = {rating: -1};
+    res.render(`ratings/new`, { restaurantRoute, menuItemRoute, rating });
 });
 
 // 'create' route
 router.post('/', isLoggedIn, cacheRestaurant, cacheMenuItem, (req, res) => {
     const newRating = {
-        rating: req.body.rating,
+        rating: req.body.rating.rating,
         comment: req.body.comment,
         user: res.locals.user,
     };
-    
+
     Rating.create(newRating, (err, createdRating) => {
         const { restaurant, menuItem } = res.locals;
         if (err) {

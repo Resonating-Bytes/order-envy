@@ -13,7 +13,7 @@
 <% if (ratings.length) { %>
     <div class="menu-item-container">
         <div class="row">
-            <div class="col-3">
+            <div class="col-2">
                 <h5>Rating</h5>
             </div>
             <div class="col-9">
@@ -23,8 +23,10 @@
         <div class="container">
             <% ratings.forEach((rating) => { %>
                 <div class="row rating">
-                    <div class="col-3">
-                        <a class="btn btn-outline-primary bg-light float-right" href="<%= baseRatingLink %>/<%= rating._id %>"><%= rating.rating %></a>
+                    <div class="col-2">
+                        <a class="btn btn-outline-primary bg-light float-right" href="<%= baseRatingLink %>/<%= rating._id %>">
+                            <img src="<%= ratingInfo[rating.rating].img %>Small.png">
+                        </a>
                     </div>
                     <div class="col-9">
                         <%= limitText(rating.comment, 30) %>

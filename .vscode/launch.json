@@ -15,7 +15,8 @@
             "type": "node",
             "request": "launch",
             "name": "Start",
-            "program": "${workspaceFolder}\\app.js"
+            "program": "${workspaceFolder}\\app.js",
+            "console": "integratedTerminal"
         }
     ]
 }
