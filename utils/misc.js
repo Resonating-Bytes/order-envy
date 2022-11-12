@@ -33,6 +33,13 @@ module.exports = {
         return txt;
     },
 
+    // get the rating info to use given the rating value
+    getRatingInfo: (ratingInfo, rating) => {
+        // make sure the rating stays in the bounds of the defined images
+        // also have to convert from 1 based index to 0 based
+        return ratingInfo[Math.min(Math.max(rating - 1, 0), ratingInfo.length)];
+    },
+
     getCookies: (request) => {
         var cookies = {};
         if (request.headers && request.headers.cookie) {

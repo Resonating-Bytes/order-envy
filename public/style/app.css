@@ -115,3 +115,18 @@ form textarea {
     width: 0;
     height: 0;
 }
+
+[type=checkbox] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+[type=checkbox]+label {
+    cursor: pointer;
+}
+
+.navigation {
+    margin: 0 15px 0 15px;
+}

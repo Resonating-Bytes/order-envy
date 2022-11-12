@@ -3,7 +3,7 @@ const router = express.Router({mergeParams: true});
 
 const isLoggedIn = require('../middleware/isLoggedIn');
 const { canEditRestaurant } = require('../middleware/restaurant');
-const { filterUserOwned, limitText, getCookies } = require('../utils/misc');
+const { filterUserOwned, limitText, getCookies, getRatingInfo } = require('../utils/misc');
 const List = require('../models/list');
 const Recommendation = require('../models/recommendation');
 const Note = require('../models/note');
@@ -112,7 +112,7 @@ function averageRating(ratings, user) {
         }
     }
 
-    return (count ? Math.round(total / count) : '+');
+    return (count ? Math.round(total / count) : null);
 }
 
 // 'show' route
@@ -140,7 +140,7 @@ router.get('/:restaurantID', (req, res) => {
                                     if (!('ratings' in res.locals)) {
                                         res.locals.ratings = [];
                                     }
-                                    res.render('restaurants/show', { restaurant, averageRating, filterUserOwned, lists, recommendations, note, limitText });
+                                    res.render('restaurants/show', { restaurant, averageRating, filterUserOwned, lists, recommendations, note, limitText, getRatingInfo });
                                 }
                             });
                         }

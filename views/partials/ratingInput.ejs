@@ -1,13 +1,17 @@
-<table class="centered">
-    <tr>
-        <% for (let i = 0; i < ratingInfo.length; i++) { %>
-            <% const ri = ratingInfo[i]; %>
-            <td class="centered">
-                <label>
-                    <input type="radio" name="rating[rating]" value="<%= i %>" <% if ('rating' in this && rating.rating == i) { %>checked<% } %>>
-                    <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
-                </label>
-            </td>
-        <% } %>
-    </tr>
-</table>
+<div class="form-group">
+    <table class="centered">
+        <tr>
+            <% ratingInfo.forEach((ri, idx) => { %>
+                <td class="centered">
+                    <label>
+                        <input type="radio" name="ratingData[rating]" value="<%= idx + 1 %>" <% if (ratingData.rating == idx) { %>checked<% } %>>
+                        <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
+                    </label>
+                </td>
+            <% }); %>
+        </tr>
+    </table>
+</div>
+<div class="form-group">
+    <input class="form-control" type="text" name="ratingData[comment]" placeholder="Comment" value="<%= ratingData.comment %>" autofocus>
+</div>

@@ -1,16 +1,18 @@
 <%- include("../partials/header") %>
 
-    <a href="/users/<%= user._id %>">Back</a>
+    <div class="row">
+        <div class="col-2">
+            <a class="btn btn-outline-primary bg-light" href="/users/<%= user._id %>" title="Friends List">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        </div>
+    </div>
+    <hr class="spacer">
 
     <h2>Recent ratings from <%= friendName %></h2>
 
     <div class="container">
-        <% if (prevPage !== undefined) { %>
-            <div class="row">
-                <a href="<%= prevPage %>">Prev Page</a>
-            </div>
-        <% } %>
-
+        <br>
         <div class="row">
             <div class="col-lg-2"><h4>Date</h4></div>
             <div class="col-lg-2"><h4>Rating</h4></div>
@@ -19,8 +21,9 @@
         </div>
         <% recent.forEach((info) => { %>
             <div class="row">
-                <div class="col-lg-2"><%= new Date(info.rating.createdAt).toLocaleDateString() %></div>
-                <div class="col-lg-2"><%= info.rating.rating %></div>
+                <div class="col-lg-2"><%= new Date(info.ratingData.createdAt).toLocaleDateString() %></div>
+                <% const ri = getRatingInfo(ratingInfo, info.ratingData.rating) %>
+                <div class="col-lg-2"><img src="<%= ri.img %>Small.png" alt="<%= ri.alt %>" title="<%= ri.title %>"></div>
                 <div class="col-lg-3">
                     <% if (info.restaurant) { %>
                         <% if (info.menuItem) { %>
@@ -34,15 +37,23 @@
                         <% } %>
                     <% } %>
                 </div>
-                <div class="col-lg-5"><%= info.rating.comment %></div>
+                <div class="col-lg-5"><%= info.ratingData.comment %></div>
             </div>
         <% }); %>
 
-        <% if (nextPage !== undefined) { %>
-            <div class="row">
-                <a href="<%= nextPage %>">Next Page</a>
-            </div>
-        <% } %>
+        <div class="row">
+            <% if (prevPage !== undefined) { %>
+                <a class="btn btn-outline-primary bg-light col-lg-1 navigation" href="<%= prevPage %> " title="Previous Page">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            <% } %>
+
+            <% if (nextPage !== undefined) { %>
+                <a class="btn btn-outline-primary bg-light col-lg-1 navigation" href="<%= nextPage %> " title="Next Page">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            <% } %>
+        </div>
     </div>
 
 <%- include("../partials/footer") %>

@@ -5,6 +5,7 @@ const isLoggedIn = require('../middleware/isLoggedIn');
 const { cacheRestaurant } = require('../middleware/restaurant');
 const { cacheMenuItem } = require('../middleware/menuItem');
 const { userOwnsRating } = require('../middleware/rating');
+const { getRatingInfo } = require('../utils/misc');
 const Rating = require('../models/rating');
 
 // helper to build up route based on available pieces from request
@@ -23,15 +24,17 @@ router.get('/new', isLoggedIn, cacheRestaurant, cacheMenuItem, (req, res) => {
     const { menuItem, restaurant } = res.locals;
     const restaurantRoute = (restaurant ? `/restaurants/${restaurant._id}` : ``);
     const menuItemRoute = (menuItem ? `/menuItems/${menuItem._id}` : ``);
-    const rating = {rating: -1};
-    res.render(`ratings/new`, { restaurantRoute, menuItemRoute, rating });
+    const ratingData = {
+        rating: -1,
+        comment: "",
+    };
+    res.render(`ratings/new`, { restaurantRoute, menuItemRoute, ratingData });
 });
 
 // 'create' route
 router.post('/', isLoggedIn, cacheRestaurant, cacheMenuItem, (req, res) => {
     const newRating = {
-        rating: req.body.rating.rating,
-        comment: req.body.comment,
+        ...req.body.ratingData,
         user: res.locals.user,
     };
 
@@ -62,19 +65,19 @@ router.post('/', isLoggedIn, cacheRestaurant, cacheMenuItem, (req, res) => {
 
 // 'show' route
 router.get('/:ratingID', userOwnsRating, cacheRestaurant, cacheMenuItem, (req, res) => {
-    const { rating, restaurant, menuItem } = res.locals;
+    const { ratingData, restaurant, menuItem } = res.locals;
     const restaurantRoute = (restaurant ? `/restaurants/${restaurant._id}` : ``);
     const menuItemRoute = (menuItem ? `/menuItems/${menuItem._id}` : ``);
-    res.render('ratings/show', { rating, restaurant, restaurantRoute, menuItem, menuItemRoute, rating });
+    res.render('ratings/show', { ratingData, restaurant, restaurantRoute, menuItem, menuItemRoute, getRatingInfo });
 });
 
 // 'edit' route
 router.get('/:ratingID/edit', userOwnsRating, cacheRestaurant, cacheMenuItem, (req, res) => {
-    const { restaurant, menuItem, rating } = res.locals;
-    if (rating) {
+    const { restaurant, menuItem, ratingData } = res.locals;
+    if (ratingData) {
         const restaurantRoute = (restaurant ? `/restaurants/${restaurant._id}` : ``);
         const menuItemRoute = (menuItem ? `/menuItems/${menuItem._id}` : ``);
-        res.render(`ratings/edit`, { menuItemRoute, restaurantRoute, rating });
+        res.render(`ratings/edit`, { menuItemRoute, restaurantRoute, ratingData });
     } else {
         req.flash(`error`, `Unknown error editing rating`);
         res.redirect(`/restaurants`);
@@ -84,13 +87,13 @@ router.get('/:ratingID/edit', userOwnsRating, cacheRestaurant, cacheMenuItem, (r
 // 'update' route
 router.put('/:ratingID', userOwnsRating, cacheRestaurant, cacheMenuItem, (req, res) => {
     // since we already have the rating we can update it directly and save
-    const { restaurant, menuItem, rating } = res.locals;
-    if (rating) {
-        Object.assign(rating, req.body.rating);
-        rating.save();
+    const { restaurant, menuItem, ratingData } = res.locals;
+    if (ratingData) {
+        Object.assign(ratingData, req.body.ratingData);
+        ratingData.save();
 
         const route = _buildRedirectRoute(restaurant, menuItem);
-        res.redirect(route + `/ratings/${rating._id}`);
+        res.redirect(route + `/ratings/${ratingData._id}`);
     } else {
         req.flash(`error`, `Unknown error editing rating`);
         res.redirect(`/restaurants`);
@@ -100,9 +103,9 @@ router.put('/:ratingID', userOwnsRating, cacheRestaurant, cacheMenuItem, (req, r
 // 'delete' route
 router.delete('/:ratingID', userOwnsRating, cacheRestaurant, cacheMenuItem, (req, res) => {
     // since we already have the rating we can delete it directly
-    const { menuItem, restaurant, rating } = res.locals;
-    if (rating) {
-        rating.remove((err) => {
+    const { menuItem, restaurant, ratingData } = res.locals;
+    if (ratingData) {
+        ratingData.remove((err) => {
             if (err) {
                 console.error(`Error: ${err.message}`);
                 req.flash(`error`, `Failed to remove rating: ${err.message}`);

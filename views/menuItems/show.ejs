@@ -2,7 +2,9 @@
 
     <div class="row">
         <div class="col-2 centered">
-            <a class="btn btn-outline-primary bg-light" href="/restaurants/<%= restaurant._id %>"><i class="fas fa-chevron-left"></i></a>
+            <a class="btn btn-outline-primary bg-light" href="/restaurants/<%= restaurant._id %>" title="<%= restaurant.name %>">
+                <i class="fas fa-chevron-left"></i>
+            </a>
         </div>
         <div class="col-10">
             <div class="page-header">
@@ -62,7 +64,7 @@
         const baseRatingLink = `/restaurants/${restaurant._id}/menuItems/${menuItem._id}/ratings`;
         const ratings = filterUserOwned(user, menuItem.ratings); 
         %>
-        <%- include("../partials/ratings", {baseRatingLink, ratings}) %>
+        <%- include("../partials/ratings", {baseRatingLink, ratings, getRatingInfo}) %>
     </div>
 
 <%- include("../partials/footer") %>

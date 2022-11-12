@@ -4,6 +4,7 @@ const router = express.Router({mergeParams: true});
 const isLoggedIn = require('../middleware/isLoggedIn');
 const Restaurant = require('../models/restaurant');
 const User = require('../models/user');
+const { getRatingInfo } = require('../utils/misc');
 
 // 'index' route
 router.get('/', isLoggedIn, (req, res) => {
@@ -88,17 +89,17 @@ router.get('/:friendID', isLoggedIn, (req, res) => {
                     // and we need that so we can direct link to it
                     let recent = [];
                     restaurants.forEach((restaurant) => {
-                        restaurant.ratings.forEach((rating) => {
+                        restaurant.ratings.forEach((ratingData) => {
                             recent.push({
-                                rating,
+                                ratingData,
                                 restaurant,
                             });
                         });
 
                         restaurant.menuItems.forEach((menuItem) => {
-                            menuItem.ratings.forEach((rating) => {
+                            menuItem.ratings.forEach((ratingData) => {
                                 recent.push({
-                                    rating,
+                                    ratingData,
                                     restaurant,
                                     menuItem,
                                 });
@@ -108,7 +109,7 @@ router.get('/:friendID', isLoggedIn, (req, res) => {
 
                     // show most recent first
                     recent.sort((a, b) => {
-                        return (a.rating.createdAt < b.rating.createdAt);
+                        return (a.ratingData.createdAt < b.ratingData.createdAt);
                     });
 
                     // show them a couple at a time
@@ -117,12 +118,12 @@ router.get('/:friendID', isLoggedIn, (req, res) => {
                     const start = page * pageSize;
                     const end = start + pageSize;
                     const urlBase = `/users/${res.locals.user._id}/friends/${req.params.friendID}?p=`;
-                    const prevPage = (page > 0 ? urlBase + (page - 1) : undefined);
-                    const nextPage = (end < recent.length ? urlBase + (page + 1) : undefined);
+                    const prevPage = (page > 0 ? urlBase + (Number(page) - 1) : undefined);
+                    const nextPage = (end < recent.length ? urlBase + (Number(page) + 1) : undefined);
                     recent = recent.slice(start, end);
 
                     const friendName = friend.getDisplayName();
-                    res.render('friends/show', { friendName, recent, prevPage, nextPage });
+                    res.render('friends/show', { friendName, recent, prevPage, nextPage, getRatingInfo });
                 }
             });
         }

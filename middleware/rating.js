@@ -7,7 +7,7 @@ module.exports = {
      * Passes if the rating referenced in req is found
      */
     cacheRating: (req, res, next) => {
-        Rating.findById(req.params.ratingID, (err, rating) => {
+        Rating.findById(req.params.ratingID, (err, ratingData) => {
             if (err) {
                 console.error(`Error: ${err.message}`);
                 req.flash(`error`, `Rating not found: ${err.message}`);
@@ -15,7 +15,7 @@ module.exports = {
             }
 
             // pass the rating through to the next route
-            res.locals.rating = rating;
+            res.locals.ratingData = ratingData;
             return next();
         });
     },
@@ -28,15 +28,15 @@ module.exports = {
     userOwnsRating: (req, res, next) => {
         isLoggedIn(req, res, () => {
             module.exports.cacheRating(req, res, () => {
-                const { rating } = res.locals;
-                if (isOwner(req.user, rating, 'user')) {
+                const { ratingData } = res.locals;
+                if (isOwner(req.user, ratingData, 'user')) {
                     return next();
                 }
 
                 req.flash(`error`, `You don't have permission for that`);
 
                 // clear out the rating so it isn't used by accident
-                delete res.locals.rating;
+                delete res.locals.ratingData;
 
                 // if they are logged in but anything else goes wrong,
                 // just send them back where they came from

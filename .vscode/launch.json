@@ -12,11 +12,17 @@
             "restart": true
         },
         {
-            "type": "node",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "name": "Debug",
+            "program": "${workspaceFolder}/app.js",
             "request": "launch",
-            "name": "Start",
-            "program": "${workspaceFolder}\\app.js",
-            "console": "integratedTerminal"
-        }
+            "restart": true,
+            "runtimeExecutable": "nodemon",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node"
+        },
     ]
 }

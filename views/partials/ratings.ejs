@@ -1,11 +1,13 @@
 <h2>
     <div class="row">
-        <div class="col-9">
+        <div class="col-10">
             Ratings
         </div>
-        <div class="col-3">
+        <div class="col-2">
             <% if (user) { %>
-                <a href="<%= baseRatingLink %>/new" class="btn btn-xs btn-outline-primary bg-light">+</a>
+                <a href="<%= baseRatingLink %>/new" class="btn btn-xs btn-outline-primary bg-light" title="New Rating">
+                    <i class="fa-solid fa-plus"></i>
+                </a>
             <% } %>
         </div>
     </div>
@@ -21,15 +23,19 @@
             </div>
         </div>
         <div class="container">
-            <% ratings.forEach((rating) => { %>
+            <% ratings.forEach((ratingData) => { %>
                 <div class="row rating">
                     <div class="col-2">
-                        <a class="btn btn-outline-primary bg-light float-right" href="<%= baseRatingLink %>/<%= rating._id %>">
-                            <img src="<%= ratingInfo[rating.rating].img %>Small.png">
-                        </a>
+                        <% const ri = getRatingInfo(ratingInfo, ratingData.rating) %>
+                        <img src="<%= ri.img %>Small.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
                     </div>
                     <div class="col-9">
-                        <%= limitText(rating.comment, 30) %>
+                        <%= limitText(ratingData.comment, 30) %>
+                    </div>
+                    <div class="col-1">
+                        <a class="btn btn-outline-warning bg-light float-right" href="<%= baseRatingLink %>/<%= ratingData._id %>">
+                            <i class="fas fa-edit"></i>
+                        </a>
                     </div>
                 </div>
             <% }); %>

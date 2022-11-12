@@ -7,7 +7,18 @@
             <h4>How was your overall meal?</h4>
         </div>
         <div class="form-group">
-            <input class="form-control" type="number" min="0" max="5" step="0.1" name="<%= restaurant._id %>[rating]" placeholder="Rating" autofocus>
+            <table class="centered">
+                <tr>
+                    <% ratingInfo.forEach((ri, idx) => { %>
+                        <td class="centered">
+                            <label>
+                                <input type="radio" name="<%= restaurant._id %>[rating]" value="<%= idx + 1 %>">
+                                <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
+                            </label>
+                        </td>
+                    <% }); %>
+                </tr>
+            </table>
             <input class="form-control" type="text" name="<%= restaurant._id %>[comment]" placeholder="Comment">
         </div>
 
@@ -20,13 +31,20 @@
                 <div class="rating">
                     <input type="checkbox" id="<%= menuItem._id %>[id]" name="<%= menuItem._id %>[checked]" value="<%= menuItem._id %>" onclick="toggleMenuItem(this.value)">
                     <label for="<%= menuItem._id %>[id]"><%= menuItem.name %></label>
-                    <div id="<%= menuItem._id %>" hidden>
-                        <div class="form-group">
-                            <input class="form-control" type="number" min="0" max="5" step="0.1" name="<%= menuItem._id %>[rating]" placeholder="Rating">
-                        </div>
-                        <div class="form-group">
-                            <input class="form-control" type="text" name="<%= menuItem._id %>[comment]" placeholder="Comment">
-                        </div>
+                    <div class="form-group" id="<%= menuItem._id %>" hidden>
+                        <table class="centered">
+                            <tr>
+                                <% ratingInfo.forEach((ri, idx) => { %>
+                                    <td class="centered">
+                                        <label>
+                                            <input type="radio" name="<%= menuItem._id %>[rating]" value="<%= idx + 1 %>">
+                                            <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
+                                        </label>
+                                    </td>
+                                <% }); %>
+                            </tr>
+                        </table>
+                        <input class="form-control" type="text" name="<%= menuItem._id %>[comment]" placeholder="Comment">
                     </div>
                 </div>
             <% }); %>

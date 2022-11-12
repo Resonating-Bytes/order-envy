@@ -1,28 +1,29 @@
 <%- include("../partials/header") %>
 
     <div class="page-header">
-        Rating for:
-        <br>
+        Rating Info for
         <% if (!!menuItem) { %>
             <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>"><%= menuItem.name %></a>
-            <br> at <br>
+            at
         <% } %>
         <a href="/restaurants/<%= restaurant._id %>"><%= restaurant.name %></a>
     </div>
 
     <div class="row">
         <div class="col-2">
-            <a class="btn btn-outline-primary bg-light" href="<%= restaurantRoute %><%= menuItemRoute %>"><</a>
+            <a class="btn btn-outline-primary bg-light" href="<%= restaurantRoute %><%= menuItemRoute %>" title="<%= (menuItem ? menuItem.name : restaurant.name) %> Summary">
+                <i class="fas fa-chevron-left"></i>
+            </a>
         </div>
          <% if (user) { %>
             <div class="col">
                 <div class="row">
                     <div class="col-6"></div>
                     <div class="col-3">
-                        <a href="<%= restaurantRoute %><%= menuItemRoute %>/ratings/<%= rating._id %>/edit" class="btn btn-warning">Edit</a>
+                        <a href="<%= restaurantRoute %><%= menuItemRoute %>/ratings/<%= ratingData._id %>/edit" class="btn btn-warning">Edit</a>
                     </div>
                     <div class="col-3">
-                        <form class="delete-item" action="<%= restaurantRoute %><%= menuItemRoute %>/ratings/<%= rating._id %>?_method=DELETE" method="POST">
+                        <form class="delete-item" action="<%= restaurantRoute %><%= menuItemRoute %>/ratings/<%= ratingData._id %>?_method=DELETE" method="POST">
                             <button class="btn btn-danger">Delete</button>
                         </form>
                     </div>
@@ -39,7 +40,8 @@
                 <h2>Rating</h2>
             </div>
             <div class="col-6">
-                <h2><%= rating.rating %></h2>
+                <% const ri = getRatingInfo(ratingInfo, ratingData.rating) %>
+                <img src="<%= ri.img %>Small.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
             </div>
         </div>
 
@@ -48,13 +50,13 @@
                 <h2>Date</h2>
             </div>
             <div class="col-6">
-                <h2><%- new Date(rating.createdAt).toLocaleDateString() %></h2>
+                <h2><%- new Date(ratingData.createdAt).toLocaleDateString() %></h2>
             </div>
         </div>
 
         <h2>Comment</h2>
         <div class="menu-item-container">
-            <%= rating.comment %>
+            <%= ratingData.comment %>
         </div>
     </div>
 
