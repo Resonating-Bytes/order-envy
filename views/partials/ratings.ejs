@@ -1,9 +1,9 @@
 <h2>
     <div class="row">
-        <div class="col-10">
+        <div class="col-9">
             Ratings
         </div>
-        <div class="col-2">
+        <div class="col-3">
             <% if (user) { %>
                 <a href="<%= baseRatingLink %>/new" class="btn btn-xs btn-outline-primary bg-light" title="New Rating">
                     <i class="fa-solid fa-plus"></i>
@@ -14,29 +14,37 @@
 </h2>
 <% if (ratings.length) { %>
     <div class="menu-item-container">
-        <div class="row">
-            <div class="col-2">
-                <h5>Rating</h5>
-            </div>
-            <div class="col-2">
-            </div>
-            <div class="col-8">
-                <h5>Comment</h5>
+        <div class="container">
+            <div class="row">
+                <div class="col-5 no-padding">
+                    <h5>Rating</h5>
+                </div>
+                <div class="col-7 no-padding">
+                    <h5>Comment</h5>
+                </div>
             </div>
         </div>
         <div class="container">
-            <% ratings.forEach((ratingData) => { %>
+            <% ratings.forEach((ratingData, idx) => { %>
+                <% if (idx > 0) { %>
+                    <hr class="spacer low-margin">
+                <% } %>
+
                 <div class="row">
-                    <div class="col-2">
-                        <% const ri = getRatingInfo(ratingInfo, ratingData.rating) %>
-                        <img src="<%= ri.img %>Small.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
+                    <div class="col-5 no-padding">
+                        <div class="row">
+                            <div class="col-6 low-padding">
+                                <% const ri = getRatingInfo(ratingInfo, ratingData.rating) %>
+                                <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
+                            </div>
+                            <div class="col-4 low-padding">
+                                <a class="btn btn-outline-warning bg-light float-right" href="<%= baseRatingLink %>/<%= ratingData._id %>">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-2">
-                        <a class="btn btn-outline-warning bg-light float-right ratingButton" href="<%= baseRatingLink %>/<%= ratingData._id %>">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                    </div>
-                    <div class="col-8">
+                    <div class="col-7 no-padding">
                         <%= ratingData.comment %>
                     </div>
                 </div>

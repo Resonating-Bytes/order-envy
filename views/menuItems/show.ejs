@@ -13,7 +13,12 @@
         </div>
     </div>
     <div class="container centered">
-        <strong><%= restaurant.name %> : <%= menuItem.category %></strong>
+        <strong>
+            <a href="/restaurants/<%= restaurant._id %>" title="<%= restaurant.name %>">
+                <%= restaurant.name %>
+            </a>
+            : <%= menuItem.category %>
+        </strong>
     </div>
 
     <% if (user) { %>

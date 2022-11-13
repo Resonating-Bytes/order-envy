@@ -10,49 +10,62 @@
     <hr class="spacer">
 
     <h2>Recent ratings from <%= friendName %></h2>
+    <br>
 
     <div class="container">
-        <br>
-        <div class="row">
-            <div class="col-lg-2"><h4>Date</h4></div>
-            <div class="col-lg-2"><h4>Rating</h4></div>
-            <div class="col-lg-3"><h4>Restaurant / Item</h4></div>
-            <div class="col-lg-5"><h4>Comment</h4></div>
-        </div>
-        <% recent.forEach((info) => { %>
+        <% recent.forEach((info, idx) => { %>
+            <% if (idx > 0) { %>
+                <hr class="spacer low-margin">
+            <% } %>
+
             <div class="row">
-                <div class="col-lg-2"><%= new Date(info.ratingData.createdAt).toLocaleDateString() %></div>
-                <% const ri = getRatingInfo(ratingInfo, info.ratingData.rating) %>
-                <div class="col-lg-2"><img src="<%= ri.img %>Small.png" alt="<%= ri.alt %>" title="<%= ri.title %>"></div>
-                <div class="col-lg-3">
-                    <% if (info.restaurant) { %>
-                        <% if (info.menuItem) { %>
-                            <a href="/restaurants/<%= info.restaurant._id %>/menuItems/<%= info.menuItem._id %>">
-                                <%= info.menuItem.name %>
-                            </a>
-                        <% } else { %>
-                            <a href="/restaurants/<%= info.restaurant._id %>">
-                                <%= info.restaurant.name %>
-                            </a>
-                        <% } %>
-                    <% } %>
+                <div class="col-4">
+                    <div class="row">
+                        <%= new Date(info.ratingData.createdAt).toLocaleDateString() %>
+                    </div>
+                    <div class="row">
+                        <% const ri = getRatingInfo(ratingInfo, info.ratingData.rating) %>
+                        <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
+                    </div>
                 </div>
-                <div class="col-lg-5"><%= info.ratingData.comment %></div>
+                <div class="col-8">
+                    <div class="row">
+                        <% if (info.restaurant) { %>
+                            <% if (info.menuItem) { %>
+                                <a href="/restaurants/<%= info.restaurant._id %>/menuItems/<%= info.menuItem._id %>">
+                                    <%= info.menuItem.name %>
+                                </a>
+                            <% } else { %>
+                                <a href="/restaurants/<%= info.restaurant._id %>">
+                                    <%= info.restaurant.name %>
+                                </a>
+                            <% } %>
+                        <% } %>
+                    </div>
+                    <div class="row">
+                        <%= info.ratingData.comment %>
+                    </div>
+                </div>
             </div>
         <% }); %>
 
         <div class="row">
-            <% if (prevPage !== undefined) { %>
-                <a class="btn btn-outline-primary bg-light col-lg-1 navigation" href="<%= prevPage %> " title="Previous Page">
-                    <i class="fas fa-chevron-left"></i>
-                </a>
-            <% } %>
-
-            <% if (nextPage !== undefined) { %>
-                <a class="btn btn-outline-primary bg-light col-lg-1 navigation" href="<%= nextPage %> " title="Next Page">
-                    <i class="fas fa-chevron-right"></i>
-                </a>
-            <% } %>
+            <div class="col-3 no-padding">
+                <% if (prevPage !== undefined) { %>
+                    <a class="btn btn-outline-primary bg-light col-lg-1 navigation" href="<%= prevPage %> " title="Previous Page">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                <% } %>
+            </div>
+            <div class="col-5">
+            </div>
+            <div class="col-3 no-padding">
+                <% if (nextPage !== undefined) { %>
+                    <a class="btn btn-outline-primary bg-light col-lg-1 navigation" href="<%= nextPage %> " title="Next Page">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                <% } %>
+            </div>
         </div>
     </div>
 

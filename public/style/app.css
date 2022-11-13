@@ -16,7 +16,7 @@
 
 .spacer {
     width: 100%;
-    margin: 25px auto;
+    /* margin: 25px auto; */
     color: #f8f9fa
 }
 
@@ -52,10 +52,6 @@ form textarea {
 
 .note-container {
     overflow: auto;
-}
-
-.rating-container {
-    margin-top: 15px;
 }
 
 .menuItem {
@@ -139,6 +135,22 @@ form textarea {
     margin: 0 15px 0 15px;
 }
 
-.ratingButton {
+.rating-button {
     margin-top: 20px;
+}
+
+.rating-image {
+    padding: 0 10px 0 10px;
+}
+
+.no-padding {
+    padding: 0;
+}
+
+.low-padding {
+    padding: 5px;
+}
+
+.low-margin {
+    margin: 8px;
 }
