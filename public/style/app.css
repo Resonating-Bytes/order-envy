@@ -15,9 +15,13 @@
 }
 
 .spacer {
-    width: 100%;
+    width: 95%;
     /* margin: 25px auto; */
-    color: #f8f9fa
+    color: #f8f9fa;
+}
+
+.dark-spacer {
+    border-top: 1px solid rgba(0, 0, 0, .5);
 }
 
 .row-spacer {

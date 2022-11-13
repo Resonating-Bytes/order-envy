@@ -119,7 +119,11 @@
             </div>
         </h2>
         <div class="menu-item-container">
-            <% restaurant.getCategories().forEach((category) => { %>
+            <% restaurant.getCategories().forEach((category, catIdx) => { %>
+                <% if (catIdx > 0) { %>
+                    <hr class="spacer dark-spacer low-margin">
+                <% } %>
+
                 <div class="row">
                     <div class="col-4">
                         <h5><%= category.label %></h5>
@@ -161,9 +165,9 @@
                             <div class="col-7 no-padding">
                                 <div class="row">
                                     <div class="col-10 low-padding">
-                                        <h4 class="menuItem">
+                                        <h5 class="menuItem">
                                             <%= menuItem.name %>
-                                        </h4>
+                                        </h5>
                                         <% if (menuItem.description) { %>
                                             <%= menuItem.description %>
                                         <% } %>
