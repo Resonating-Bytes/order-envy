@@ -1,0 +1,29 @@
+<%- include("../partials/header") %>
+
+    <script>
+        function deleteConfirm() {
+            return confirm(`Are you sure you want to delete this friend?`);
+        }
+    </script>
+
+    <div class="centered">
+        <h1 class="header-text">Friends</h1>
+
+        <%- include("../partials/newFriend") %>
+
+        <% user.friends.forEach((friend) => { %>
+            <div class="row new-item-form">
+                <div class="col-9 centered">
+                    <a class="btn btn-outline-primary bg-light" href="/users/<%= user._id %>/friends/<%= friend._id %>">
+                        <%= friend.getDisplayName() %>
+                    </a>
+                </div>
+            </div>
+        <% }); %>
+
+        <% if (user.friends.length > 5) { %>
+            <%- include("../partials/newFriend") %>
+        <% } %>
+    </div>
+
+<%- include("../partials/footer") %>

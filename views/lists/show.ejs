@@ -1,43 +1,65 @@
 <%- include("../partials/header") %>
 
-    <div class="page-header">
-        <%= list.name %>
-    </div>
-    <div class="item-action">
-        <form class="delete-item" action="/lists/<%= list._id %>?_method=DELETE" method="POST">
-            <button class="btn btn-outline-danger">
-                <i class="fas fa-trash"></i>
-            </button>
-        </form>
-    </div>
-    <div class="item-action">
-        <a href="/lists/<%= list._id %>/edit" class="btn btn-outline-warning">
-            <i class="fas fa-edit"></i>
-        </a>
-    </div>
-    <% if (user.friends.length) { %>
-        <div class="dropdown item-action">
-            <button class="btn btn-outline-success dropdown-toggle" type="button" data-toggle="dropdown">Share with...</button>
-            <div class="dropdown-menu" id="friendDropdown">
-                <input type="text" id="friendInput" onkeyup="filterFunction('friendInput', 'friendDropdown')" placeholder="Search for friends...">
-                <% user.friends.forEach((friend) => { %>
-                    <a class="dropdown-item" href="/lists/<%= list._id %>/addOwner/<%= friend._id %>"><%= friend.getDisplayName() %></a>
-                <% }); %>
+    <div class="row">
+        <div class="col-2 centered">
+            <a class="btn btn-outline-primary bg-light" href="/lists" title="Lists">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        </div>
+        <div class="col-10">
+            <div class="page-header">
+                <%= list.name %>
             </div>
         </div>
-    <% } %>
+    </div>
+
+    <hr class="spacer">
+
+    <div class="container">
+        <div class="row row-spacer">
+            <div class="col-4">
+                <% if (user.friends.length) { %>
+                    <div class="dropdown item-action">
+                        <button class="btn btn-outline-success dropdown-toggle" type="button" data-toggle="dropdown">Share with...</button>
+                        <div class="dropdown-menu" id="friendDropdown">
+                            <input type="text" id="friendInput" onkeyup="filterFunction('friendInput', 'friendDropdown')" placeholder="Search for friends...">
+                            <% user.friends.forEach((friend) => { %>
+                                <a class="dropdown-item" href="/lists/<%= list._id %>/addOwner/<%= friend._id %>"><%= friend.getDisplayName() %></a>
+                            <% }); %>
+                        </div>
+                    </div>
+                <% } %>
+            </div>
+            <div class="col-4">
+                <a href="/lists/<%= list._id %>/edit" class="btn btn-outline-warning">
+                    <i class="fas fa-edit"></i>
+                </a>
+            </div>
+            <div class="col-4">
+                <form class="delete-item" action="/lists/<%= list._id %>?_method=DELETE" method="POST">
+                    <button class="btn btn-outline-danger">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <hr class="spacer">
 
     <div class="container">
         <% list.restaurants.forEach((restaurant) => { %>
             <div class="row">
-                <div class="col-lg-2">
-                    <a href="/lists/<%= list._id %>/removeRestaurant/<%= restaurant._id %>" class="btn btn-outline-danger">
-                        <i class="fas fa-trash"></i>
+                <div class="col-2">
+                </div>
+                <div class="col-8 centered">
+                    <a class="btn btn-outline-primary bg-light" href="/restaurants/<%= restaurant._id %>">
+                        <%= restaurant.name %>
                     </a>
                 </div>
-                <div class="col-lg-10">
-                    <a href="/restaurants/<%= restaurant._id %>">
-                        <%= restaurant.name %>
+                <div class="col-2">
+                    <a href="/lists/<%= list._id %>/removeRestaurant/<%= restaurant._id %>" class="btn btn-outline-danger">
+                        <i class="fas fa-trash"></i>
                     </a>
                 </div>
             </div>

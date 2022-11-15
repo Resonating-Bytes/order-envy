@@ -1,18 +1,23 @@
 <%- include("../partials/header") %>
 
-    <h1 class="header-text">This is the list index page</h1>
+    <div class="centered">
+        <h1 class="header-text">Lists</h1>
 
-    <ul>
-    <% lists.forEach((list) => { %>
-        <li>
-            <a href="/lists/<%= list._id %>">
-                <%= list.name %>
-            </a>
-        </li>
-    <% }); %>
+        <%- include("../partials/newList") %>
 
-    </ul>
+        <% lists.forEach((list) => { %>
+            <div class="row new-item-form">
+                <div class="col-9 centered">
+                    <a class="btn btn-outline-primary bg-light" href="/lists/<%= list._id %>">
+                        <%= list.name %>
+                    </a>
+                </div>
+            </div>
+        <% }); %>
 
-    <a href="/lists/new" class="btn btn-lg btn-primary">Add List</a>
+        <% if (lists.length > 5) { %>
+            <%- include("../partials/newList") %>
+        <% } %>
+    </div>
 
 <%- include("../partials/footer") %>

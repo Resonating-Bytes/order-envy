@@ -1,16 +1,33 @@
 <%- include("./partials/header") %>
 
-    <h2 class="header-text">
+    <h2 class="sub-header-text">
         Helping you
-        <br>
+    </h2>
+    <h2 class="header-text">
         enjoy your next meal
-    </h2> 
+    </h2>
 
-    <a class="btn btn-block btn-primary" href="/restaurants">Restaurants</a></li>
-    <% if (user) { %>
-        <a class="btn btn-block btn-outline-primary bg-light" href="/users/<%= user._id %>">Friends</a>
-        <a class="btn btn-block btn-outline-primary bg-light" href="/lists">Lists</a>
-    <% } %>
+    <hr class="spacer">
+
+    <div class="container">
+        <div class="row-spacer">
+            <div class="col-9 centered">
+                <a class="btn btn-block btn-primary" href="/restaurants">Restaurants</a></li>
+            </div>
+        </div>
+        <% if (user) { %>
+            <div class="row-spacer">
+                <div class="col-9 centered">
+                    <a class="btn btn-block btn-outline-primary bg-light" href="/users/<%= user._id %>/friends">Friends</a>
+                </div>
+            </div>
+            <div class="row-spacer">
+                <div class="col-9 centered">
+                    <a class="btn btn-block btn-outline-primary bg-light" href="/lists">Lists</a>
+                </div>
+            </div>
+        <% } %>
+    </div>
 
     <%- include("./partials/recommendList") %>
 

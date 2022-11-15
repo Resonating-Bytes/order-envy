@@ -17,14 +17,20 @@
         <hr class="spacer">
         <div class="row row-spacer">
             <div class="col">
-                <a href="/restaurants/<%= restaurant._id %>/checkin" class="btn btn-success"><i class="fas fa-utensils"></i></a>
+                <a href="/restaurants/<%= restaurant._id %>/checkin" class="btn btn-success">
+                    <i class="fas fa-utensils"></i>
+                </a>
             </div>
             <div class="col">
-                <a href="/restaurants/<%= restaurant._id %>/edit" class="btn btn-outline-warning"><i class="fas fa-edit"></i></a>
+                <a href="/restaurants/<%= restaurant._id %>/edit" class="btn btn-outline-warning">
+                    <i class="fas fa-edit"></i>
+                </a>
             </div>
             <div class="col">
                 <form class="delete-item" action="/restaurants/<%= restaurant._id %>?_method=DELETE" method="POST">
-                    <button class="btn btn-outline-danger"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-outline-danger">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </form>
             </div>
         </div>

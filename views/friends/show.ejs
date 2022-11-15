@@ -2,7 +2,7 @@
 
     <div class="row">
         <div class="col-2">
-            <a class="btn btn-outline-primary bg-light" href="/users/<%= user._id %>" title="Friends List">
+            <a class="btn btn-outline-primary bg-light" href="/users/<%= user._id %>/friends" title="Friends List">
                 <i class="fas fa-chevron-left"></i>
             </a>
         </div>
@@ -13,6 +13,16 @@
     <br>
 
     <div class="container">
+        <% if (recent.length == 0) { %>
+            <div class="row">
+                <div class="col-8 centered">
+                    <h2 class="sub-header-text">
+                        No ratings, tell them to get out and live a little!
+                    </h2>
+                </div>
+            </div>
+        <% } %> 
+
         <% recent.forEach((info, idx) => { %>
             <% if (idx > 0) { %>
                 <hr class="spacer low-margin">

@@ -8,7 +8,11 @@ const { getRatingInfo } = require('../utils/misc');
 
 // 'index' route
 router.get('/', isLoggedIn, (req, res) => {
-    res.redirect(`/users/${res.locals.user._id}`);
+    if (req.user._id.equals(req.params.userID)) {
+        return res.render('friends/index');
+    }
+
+    res.redirect('back');
 });
 
 // 'new' route
