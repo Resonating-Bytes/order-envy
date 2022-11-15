@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const passportLocalMongoose = require('passport-local-mongoose');
+const { limitText } = require('../utils/misc');
 
 const UserSchema = new mongoose.Schema({
     username: String,
@@ -18,7 +19,7 @@ const UserSchema = new mongoose.Schema({
 });
 
 UserSchema.methods.getDisplayName = function getDisplayName() {
-    return this.firstName || this.username || '';
+    return limitText(this.firstName || this.username || '', 15);
 };
 
 UserSchema.plugin(passportLocalMongoose);

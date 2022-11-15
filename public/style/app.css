@@ -103,16 +103,16 @@ form textarea {
     padding-top: 90px;
 }
 
-[type=radio]:checked+img {
+[type=radio]:checked+picture {
     border-bottom: 2px solid #222;
     opacity: 1;
 }
 
-[type=radio]:hover+img {
+[type=radio]:hover+picture {
     opacity: 1;
 }
 
-[type=radio]+img {
+[type=radio]+picture {
     cursor: pointer;
     opacity: 0.5;
 }
@@ -157,4 +157,8 @@ form textarea {
 
 .low-margin {
     margin: 8px;
+}
+
+.header-text {
+    font-size: 5vw;
 }
