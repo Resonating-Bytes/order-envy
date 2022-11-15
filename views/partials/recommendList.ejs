@@ -17,7 +17,9 @@
             </div>
             <div class="col-lg-6 float-right">
                 <form class="delete-item" action="/users/share/<%= user._id %>/<%= recommendation._id %>?_method=DELETE" method="POST">
-                    <button class="btn btn-danger">Delete</button>
+                    <button class="btn btn-outline-danger">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </form>
             </div>
         </div>

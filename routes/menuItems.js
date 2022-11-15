@@ -50,6 +50,10 @@ router.post('/', isLoggedIn, cacheRestaurant, (req, res) => {
 
 // 'show' route
 router.get('/:menuItemID', cacheRestaurant, (req, res) => {
+    if (!req.user) {
+        return res.redirect('/restaurants');
+    }
+
     MenuItem.findById(req.params.menuItemID).populate({path: 'ratings', options: {sort: {'createdAt': -1}}}).exec((err, menuItem) => {
         if (err) {
             console.error(`Error: ${err.message}`);

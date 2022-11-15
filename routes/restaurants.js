@@ -11,6 +11,12 @@ const Restaurant = require('../models/restaurant');
 
 // 'index' route
 router.get('/', (req, res) => {
+    if (req.cookies.loginRedirect) {
+        const redirectUrl = req.cookies.loginRedirect;
+        res.cookie('loginRedirect', undefined, {maxAge: 0, httpOnly: true});
+        return res.redirect(redirectUrl);
+    }
+
     Restaurant.find({}).sort('name').exec((err, restaurants) => {
         if (err) {
             console.error(`Error getting restaurants: ${err.message}`);

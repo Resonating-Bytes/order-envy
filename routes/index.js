@@ -7,12 +7,8 @@ const User = require('../models/user');
 
 // index route
 router.get('/', (req, res) => {
-    // first check if there is a stored URL to redirect to
-    if (req.cookies.loginRedirect) {
-        const redirectUrl = req.cookies.loginRedirect;
-        res.cookie('loginRedirect', undefined, {maxAge: 0, httpOnly: true});
-        return res.redirect(redirectUrl);
-    } else if (!req.user) {
+    // if there is no user there is no reason to stay on this page
+    if (!req.user) {
         return res.redirect('/restaurants');
     }
 
@@ -56,11 +52,15 @@ router.post('/register', (req, res) => {
 });
 
 router.get('/login', (req, res) => {
+    if (req.user) {
+        return res.redirect('/restaurants');
+    }
+
     res.render('login');
 });
 
 router.post('/login', passport.authenticate('local', {
-    successRedirect: '/',
+    successRedirect: '/restaurants',
     failureRedirect: '/login',
 }), (req, res) => {
     // nothing to actually do, user will be redirected on success or failure

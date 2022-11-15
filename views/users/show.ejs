@@ -12,7 +12,9 @@
             <div class="col">
                 <div class="row">
                     <div class="col">
-                        <a href="/users/<%= user._id %>/edit" class="btn btn-outline-secondary"><i class="fas fa-edit"></i></a>
+                        <a href="/users/<%= user._id %>/edit" class="btn btn-outline-warning">
+                            <i class="fas fa-edit"></i>
+                        </a>
                     </div>
                     <div class="col">
                         <form class="delete-item" action="/users/<%= user._id %>?_method=DELETE" method="POST">
