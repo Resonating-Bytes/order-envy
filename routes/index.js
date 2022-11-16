@@ -29,6 +29,12 @@ router.get('/register', (req, res) => {
 
 // handle signing up a new user
 router.post('/register', (req, res) => {
+    //* TODO: do this in the page before it is submitted
+    if (req.body.password != req.body.confirmPassword) {
+        req.flash(`error`, `Error: Passwords need to match`);
+        return res.redirect('/register');
+    }
+
     const user = {
         username: req.body.username, 
         email: req.body.username,
@@ -64,6 +70,107 @@ router.post('/login', passport.authenticate('local', {
     failureRedirect: '/login',
 }), (req, res) => {
     // nothing to actually do, user will be redirected on success or failure
+});
+
+router.get('/forgotPassword', (req, res) => {
+    res.render('forgotPassword');
+});
+
+function generateToken() {
+    var buf = new Buffer.alloc(16);
+    for (var i = 0; i < buf.length; i++) {
+        buf[i] = Math.floor(Math.random() * 256);
+    }
+
+    // swap out characters that mess with the address
+    var id = buf.toString('base64').slice(0, -2).replaceAll(/=|\/|\?/g, '_');
+    return id;
+}
+
+router.post('/forgotPassword', (req, res) => {
+    const email = req.body.email;
+
+    User.findByUsername(email, (err, user) => {
+        if (err) {
+            req.flash(`error`, `Error: No user found with that email`);
+            return res.redirect('/forgotPassword');
+        }
+
+        // store a unique token with an expiration date in 1 hour on the user
+        var token = generateToken();
+
+        //* TODO: remove once email is actually sent
+        console.log("reset token: " + token);
+        //* 
+
+        var tokenExpire = new Date();
+        tokenExpire.setTime(tokenExpire.getTime() + 60 * 60 * 1000);
+
+        User.updateOne(
+            { _id: user._id },
+            { token: token, tokenExpire: tokenExpire },
+            (err, result) => {
+                if (err || result.modifiedCount != 1) {
+                    req.flash(`error`, `Error: Failed to generate reset token, please try again`);
+                    return res.redirect('/forgotPassword');
+                } else {
+                    //* TODO: send email with token and link
+                    return res.render('resetSent', {email: email});
+                }
+        });
+    });
+});
+
+router.get('/resetPassword/:token', (req, res) => {
+    const token = req.params.token;
+    User.findOne({ token: token }, (err, user) => {
+        const tokenExpire = (user && user.tokenExpire ? user.tokenExpire.getTime() : 0);
+        if (err || tokenExpire < Date.now()) {
+            req.flash(`error`, `Error: Reset token expired, please try again`);
+            return res.redirect('/forgotPassword');
+        } else {
+            return res.render('resetPassword', {token: token, email: user.username});
+        }
+    });
+});
+
+router.post('/resetPassword', (req, res) => {
+    const token = req.body.token;
+
+    //* todo: check this on the page and disable submit until they match
+    if (req.body.newPassword != req.body.confirmPassword) {
+        req.flash(`error`, `Error: Passwords need to match`);
+        return res.redirect('/resetPassword/' + token);
+    }
+
+    // update the password
+    User.findOne({ token: token }, (err, user) => {
+        const tokenExpire = (user ? user.tokenExpire.getTime() : 0);
+        if (err || tokenExpire < Date.now()) {
+            req.flash(`error`, `Error: No user found or token expired`);
+            return res.redirect('/forgotPassword');
+        }
+
+        user.setPassword(req.body.newPassword, (err, updatedUser) => { 
+            if (err) {
+                req.flash(`error`, `Error: Failed to update password`);
+                return res.redirect('/forgotPassword');
+            }
+
+            User.updateOne(
+                { _id: updatedUser._id },
+                { hash: updatedUser.hash, salt: updatedUser.salt, $unset: { token: 1, tokenExpire: 1 } },
+                (err, result) => {
+                    if (err || result.modifiedCount != 1) {
+                        req.flash(`error`, `Error: Failed to update password, please try again`);
+                        return res.redirect('/forgotPassword');
+                    } else {
+                        req.flash(`success`, `Password successfully changed!`);
+                        return res.redirect('/login');
+                    }
+            });
+        });
+    });
 });
 
 function logoutCB(error)

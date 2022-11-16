@@ -1,0 +1,24 @@
+<%- include("./partials/header") %>
+
+    <div class="row">
+        <div class="col-2 centered">
+            <a class="btn btn-outline-primary bg-light" href="/login" title="Login">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        </div>
+        <div class="col-10">
+        </div>
+    </div>
+
+    <br>
+
+    <div class="centered">
+        <h2>Reset Password sent to:</h2>
+        <h3><%= email %></h3>
+
+        <hr class="spacer">
+
+        <h4>Follow the link in the next hour to reset the password</h4>
+    </div>
+
+<%- include("./partials/footer") %>

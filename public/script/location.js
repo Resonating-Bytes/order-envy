@@ -49,7 +49,7 @@ function findMe(reason) {
         } else if (reason === 'cookie') {
             const reloadPage = (isNaN(Number(getCookieValue('lat'))) || isNaN(Number(getCookieValue('long'))));
 
-            // set them to expire in an hour, but always update them
+            // set them to expire in 3 hours, but always update them
             // that way they are as current as possible, but we don't keep forcing the page to reload
             const expTime = new Date(Date.now() + 3 * 60 * 60 * 1000);
             const expires = `expires=${expTime.toUTCString()}`;
