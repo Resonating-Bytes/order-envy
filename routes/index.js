@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router({mergeParams: true});
 const passport = require('passport');
+const nodemailer = require('nodemailer');
 
 const Recommendation = require('../models/recommendation');
 const User = require('../models/user');
@@ -29,7 +30,7 @@ router.get('/register', (req, res) => {
 
 // handle signing up a new user
 router.post('/register', (req, res) => {
-    //* TODO: do this in the page before it is submitted
+    // sanity check, also done as part of form validation on the page
     if (req.body.password != req.body.confirmPassword) {
         req.flash(`error`, `Error: Passwords need to match`);
         return res.redirect('/register');
@@ -98,11 +99,6 @@ router.post('/forgotPassword', (req, res) => {
 
         // store a unique token with an expiration date in 1 hour on the user
         var token = generateToken();
-
-        //* TODO: remove once email is actually sent
-        console.log("reset token: " + token);
-        //* 
-
         var tokenExpire = new Date();
         tokenExpire.setTime(tokenExpire.getTime() + 60 * 60 * 1000);
 
@@ -114,8 +110,33 @@ router.post('/forgotPassword', (req, res) => {
                     req.flash(`error`, `Error: Failed to generate reset token, please try again`);
                     return res.redirect('/forgotPassword');
                 } else {
-                    //* TODO: send email with token and link
-                    return res.render('resetSent', {email: email});
+                    const transporter = nodemailer.createTransport({
+                        service: 'gmail',
+                        auth: {
+                            user: process.env.EMAIL,
+                            pass: process.env.EMAIL_PASSWORD,
+                        }
+                    });
+
+                    const mailOptions = {
+                        from: 'no-reply@orderenvy.com',
+                        replyTo: 'no-reply@orderenvy.com',
+                        to: user.username,
+                        subject: 'Reset Order Envy password',
+                        html: '<h1>Order Envy</h1>' +
+                            '<p>Use <a href="' + req.headers.origin + '/resetPassword/' + token + '">this link</a> to complete the reset process</p>' +
+                            '<p>NOTE: the password will expire in one hour</p>'
+                    };
+                      
+                    transporter.sendMail(mailOptions, (error, info) => {
+                        if (error) {
+                            req.flash(`error`, `Error: Failed to send email: ` + error);
+                            return res.redirect('/forgotPassword');
+                        } else {
+                            req.flash(`info`, `Success!`);
+                            return res.render('resetSent', {email: email});
+                        }
+                    });
                 }
         });
     });
@@ -137,7 +158,7 @@ router.get('/resetPassword/:token', (req, res) => {
 router.post('/resetPassword', (req, res) => {
     const token = req.body.token;
 
-    //* todo: check this on the page and disable submit until they match
+    // sanity check, also done as part of form validation on the page
     if (req.body.newPassword != req.body.confirmPassword) {
         req.flash(`error`, `Error: Passwords need to match`);
         return res.redirect('/resetPassword/' + token);

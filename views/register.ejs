@@ -1,9 +1,11 @@
 <%- include("./partials/header") %>
 
+    <%- include("./partials/validatePassword") %>
+
     <div class="centered">
         <h1>Sign up form</h1>
 
-        <form class="new-item-form" action="/register" method="POST">
+        <form class="new-item-form" action="/register" onsubmit="return validateForm('password')" method="POST" name="oeForm">
             <div class="container">
                 <div class="row form-group">
                     <div class="col-8 centered">
