@@ -58,24 +58,26 @@
                 </div>
             </div>
         <% }); %>
+    </div>
 
-        <div class="row">
-            <div class="col-3 no-padding">
-                <% if (prevPage !== undefined) { %>
-                    <a class="btn btn-outline-primary bg-light col-lg-1 navigation" href="<%= prevPage %> " title="Previous Page">
-                        <i class="fas fa-chevron-left"></i>
-                    </a>
-                <% } %>
-            </div>
-            <div class="col-5">
-            </div>
-            <div class="col-3 no-padding">
-                <% if (nextPage !== undefined) { %>
-                    <a class="btn btn-outline-primary bg-light col-lg-1 navigation" href="<%= nextPage %> " title="Next Page">
-                        <i class="fas fa-chevron-right"></i>
-                    </a>
-                <% } %>
-            </div>
+    <br>
+
+    <div class="row">
+        <div class="col-2">
+            <% if (prevPage !== undefined) { %>
+                <a class="btn btn-outline-primary bg-light navigation" href="<%= prevPage %> " title="Previous Page">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            <% } %>
+        </div>
+        <div class="col-6">
+        </div>
+        <div class="col-2">
+            <% if (nextPage !== undefined) { %>
+                <a class="btn btn-outline-primary bg-light navigation" href="<%= nextPage %> " title="Next Page">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            <% } %>
         </div>
     </div>
 
