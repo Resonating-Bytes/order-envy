@@ -29,7 +29,7 @@ router.get('/addRestaurant/:restaurantID', userOwnsList, (req, res) => {
 });
 
 // 'remove' route
-router.get('/removeRestaurant/:restaurantID', userOwnsList, (req, res) => {
+router.delete('/removeRestaurant/:restaurantID', userOwnsList, (req, res) => {
     const { list } = res.locals;
     if (list) {
         const oldLen = list.restaurants.length;

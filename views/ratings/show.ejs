@@ -1,5 +1,7 @@
 <%- include("../partials/header") %>
 
+    <%- include("../partials/deleteConfirm") %>
+
     <div class="page-header">
         Rating Info for
         <% if (!!menuItem) { %>
@@ -25,7 +27,7 @@
                         </a>
                     </div>
                     <div class="col-3">
-                        <form class="delete-item" action="<%= restaurantRoute %><%= menuItemRoute %>/ratings/<%= ratingData._id %>?_method=DELETE" method="POST">
+                        <form class="delete-item" action="<%= restaurantRoute %><%= menuItemRoute %>/ratings/<%= ratingData._id %>?_method=DELETE" onsubmit="return deleteConfirm(`the rating`)" method="POST">
                             <button class="btn btn-outline-danger">
                                 <i class="fas fa-trash"></i>
                             </button>

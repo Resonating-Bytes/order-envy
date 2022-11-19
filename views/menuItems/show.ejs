@@ -1,5 +1,7 @@
 <%- include("../partials/header") %>
 
+    <%- include("../partials/deleteConfirm") %>
+
     <div class="row">
         <div class="col-2 centered">
             <a class="btn btn-outline-primary bg-light" href="/restaurants/<%= restaurant._id %>" title="<%= restaurant.name %>">
@@ -36,7 +38,7 @@
                     </div>
                     <div class="col-3">
                         <form class="delete-item"
-                            action="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>?_method=DELETE" method="POST">
+                            action="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>?_method=DELETE" onsubmit="return deleteConfirm(`<%= menuItem.name %>`)" method="POST">
                             <button class="btn btn-outline-danger">
                                 <i class="fas fa-trash"></i>
                             </button>

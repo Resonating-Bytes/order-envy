@@ -1,4 +1,6 @@
 <% if (recommendations.length) { %>
+    <%- include("./deleteConfirm") %>
+
     <h2>Recommendations</h2>
     <% recommendations.forEach((recommendation) => { %>
         <%
@@ -16,7 +18,7 @@
                 </a>
             </div>
             <div class="col-lg-6 float-right">
-                <form class="delete-item" action="/users/share/<%= user._id %>/<%= recommendation._id %>?_method=DELETE" method="POST">
+                <form class="delete-item" action="/users/share/<%= user._id %>/<%= recommendation._id %>?_method=DELETE" onsubmit="return deleteConfirm(`<%= linkName %>`)" method="POST">
                     <button class="btn btn-outline-danger">
                         <i class="fas fa-trash"></i>
                     </button>

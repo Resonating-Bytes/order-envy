@@ -1,5 +1,7 @@
 <%- include("../partials/header") %>
 
+    <%- include("../partials/deleteConfirm") %>
+
     <div class="row">
         <div class="col-2 centered">
             <a class="btn btn-outline-primary bg-light" href="/lists" title="Lists">
@@ -36,7 +38,7 @@
                 </a>
             </div>
             <div class="col-3">
-                <form class="delete-item" action="/lists/<%= list._id %>?_method=DELETE" method="POST">
+                <form class="delete-item" action="/lists/<%= list._id %>?_method=DELETE" onsubmit="return deleteConfirm(`<%= list.name %>`)" method="POST">
                     <button class="btn btn-outline-danger">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -56,9 +58,11 @@
                     </a>
                 </div>
                 <div class="col-3">
-                    <a href="/lists/<%= list._id %>/removeRestaurant/<%= restaurant._id %>" class="btn btn-outline-danger">
-                        <i class="fas fa-trash"></i>
-                    </a>
+                    <form class="delete-item" action="/lists/<%= list._id %>/removeRestaurant/<%= restaurant._id %>?_method=DELETE" onsubmit="return deleteConfirm(`<%= restaurant.name %>`)" method="POST">
+                        <button class="btn btn-outline-danger">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
                 </div>
             </div>
         <% }); %>
