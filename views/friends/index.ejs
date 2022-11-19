@@ -1,10 +1,6 @@
 <%- include("../partials/header") %>
 
-    <script>
-        function deleteConfirm() {
-            return confirm(`Are you sure you want to delete this friend?`);
-        }
-    </script>
+    <%- include("../partials/deleteConfirm") %>
 
     <div class="centered">
         <h1 class="header-text">Friends</h1>
@@ -17,6 +13,13 @@
                     <a class="btn btn-outline-primary bg-light" href="/users/<%= user._id %>/friends/<%= friend._id %>">
                         <%= friend.getDisplayName() %>
                     </a>
+                </div>
+                <div class="col-3">
+                    <form class="delete-item" action="/users/<%= user._id %>/friends/<%= friend._id %>?_method=DELETE" onsubmit="return deleteConfirm(`<%= friend.name %>`)" method="POST">
+                        <button class="btn btn-outline-danger">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
                 </div>
             </div>
         <% }); %>

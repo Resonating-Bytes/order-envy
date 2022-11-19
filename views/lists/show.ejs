@@ -19,7 +19,7 @@
 
     <div class="container">
         <div class="row row-spacer">
-            <div class="col-6">
+            <div class="col-9">
                 <% if (user.friends.length) { %>
                     <div class="dropdown item-action">
                         <button class="btn btn-outline-success dropdown-toggle" type="button" data-toggle="dropdown">Share with...</button>
@@ -36,13 +36,6 @@
                 <a href="/lists/<%= list._id %>/edit" class="btn btn-outline-warning">
                     <i class="fas fa-edit"></i>
                 </a>
-            </div>
-            <div class="col-3">
-                <form class="delete-item" action="/lists/<%= list._id %>?_method=DELETE" onsubmit="return deleteConfirm(`<%= list.name %>`)" method="POST">
-                    <button class="btn btn-outline-danger">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </form>
             </div>
         </div>
     </div>
