@@ -6,6 +6,21 @@ const nodemailer = require('nodemailer');
 const Recommendation = require('../models/recommendation');
 const User = require('../models/user');
 
+// define what token is being used for
+const TOKEN_TYPE_NEW_ACCOUNT = 0
+const TOKEN_TYPE_FORGOT_PASSWORD = 1
+
+function generateToken() {
+    var buf = new Buffer.alloc(16);
+    for (var i = 0; i < buf.length; i++) {
+        buf[i] = Math.floor(Math.random() * 256);
+    }
+
+    // swap out characters that mess with the address
+    var id = buf.toString('base64').slice(0, -2).replaceAll(/=|\/|\?/g, '_');
+    return id;
+}
+
 // index route
 router.get('/', (req, res) => {
     // if there is no user there is no reason to stay on this page
@@ -36,12 +51,18 @@ router.post('/register', (req, res) => {
         return res.redirect('/register');
     }
 
+    const token = generateToken();
+    const tokenExpire = new Date();
+    tokenExpire.setTime(tokenExpire.getTime() + 60 * 60 * 1000);;
     const user = {
-        username: req.body.username, 
+        username: req.body.username,
         email: req.body.username,
         firstName: req.body.firstName,
         lastName: req.body.lastName,
         friends: [],
+        token,
+        tokenExpire,
+        tokenType: TOKEN_TYPE_NEW_ACCOUNT,
     };
     User.register(new User(user), req.body.password, (err, newUser) => {
         if (err) {
@@ -52,9 +73,64 @@ router.post('/register', (req, res) => {
 
         // new user has been created
         passport.authenticate('local', {
-            successRedirect: '/restaurants',
             failureRedirect: '/register',
-        })(req, res, () => {});
+        })(req, res, () => {
+            const transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: process.env.EMAIL,
+                    pass: process.env.EMAIL_PASSWORD,
+                }
+            });
+
+            const mailOptions = {
+                from: 'no-reply@orderenvy.com',
+                replyTo: 'no-reply@orderenvy.com',
+                to: req.body.username,
+                subject: 'Confirm Order Envy account',
+                html: '<h1>Welcome to Order Envy</h1>' +
+                    '<p>Use <a href="' + req.headers.origin + '/register/' + token + '">this link</a> to confirm your account</p>' +
+                    '<p>NOTE: the password will expire in one hour</p>'
+            };
+        
+            transporter.sendMail(mailOptions, (error, info) => {
+                if (error) {
+                    // remove the user entry since it wasn't set up properly
+                    req.user.remove();
+                    req.flash(`error`, `Error: Failed to send email: ` + error);
+                    return res.redirect('/register');
+                } else {
+                    req.logout({keepSessionInfo: false}, (err) => {
+                        if (err) {
+                            console.log(`Error while logging out: ${err}`);
+                        }
+                        return res.render('registerSent');
+                    });
+                }
+            });
+        });
+    });
+});
+
+router.get('/register/:token', (req, res) => {
+    const token = req.params.token;
+    User.findOne({ token, tokenType: TOKEN_TYPE_NEW_ACCOUNT }, (err, user) => {
+        const tokenExpire = (user && user.tokenExpire ? user.tokenExpire.getTime() : 0);
+        if (err || tokenExpire < Date.now()) {
+            if (user) {
+                user.remove();
+            }
+            req.flash(`error`, `Error: Failed to validate account, please try again`);
+            return res.redirect('/register');
+        } else {
+            // clear the token so the user isn't deleted on accident later
+            user.token = undefined;
+            user.tokenExpire = undefined;
+            user.tokenType = undefined;
+            user.save();
+            req.flash(`info`, `Account validated!`);
+            return res.redirect('/login');
+        }
     });
 });
 
@@ -67,26 +143,30 @@ router.get('/login', (req, res) => {
 });
 
 router.post('/login', passport.authenticate('local', {
-    successRedirect: '/restaurants',
     failureRedirect: '/login',
 }), (req, res) => {
-    // nothing to actually do, user will be redirected on success or failure
+    if (req.user.tokenType == TOKEN_TYPE_NEW_ACCOUNT) {
+        if (req.user.tokenExpire.getTime() < Date.now()) {
+            req.user.remove();
+            req.flash(`error`, `Error: Account registration token expired, please register again`);
+            return res.redirect('/register');
+        } else {
+            req.logout({keepSessionInfo: false}, (err) => {
+                if (err) {
+                    console.log(`Error while logging out: ${err}`);
+                }
+                req.flash(`error`, `Error: Account must be validated first, please check your email`);
+                return res.redirect(`back`);
+            });
+        }
+    } else {
+        return res.redirect('/restaurants');
+    }
 });
 
 router.get('/forgotPassword', (req, res) => {
     res.render('forgotPassword');
 });
-
-function generateToken() {
-    var buf = new Buffer.alloc(16);
-    for (var i = 0; i < buf.length; i++) {
-        buf[i] = Math.floor(Math.random() * 256);
-    }
-
-    // swap out characters that mess with the address
-    var id = buf.toString('base64').slice(0, -2).replaceAll(/=|\/|\?/g, '_');
-    return id;
-}
 
 router.post('/forgotPassword', (req, res) => {
     const email = req.body.email;
@@ -104,7 +184,7 @@ router.post('/forgotPassword', (req, res) => {
 
         User.updateOne(
             { _id: user._id },
-            { token: token, tokenExpire: tokenExpire },
+            { token, tokenExpire, tokenType: TOKEN_TYPE_FORGOT_PASSWORD },
             (err, result) => {
                 if (err || result.modifiedCount != 1) {
                     req.flash(`error`, `Error: Failed to generate reset token, please try again`);
@@ -127,7 +207,7 @@ router.post('/forgotPassword', (req, res) => {
                             '<p>Use <a href="' + req.headers.origin + '/resetPassword/' + token + '">this link</a> to complete the reset process</p>' +
                             '<p>NOTE: the password will expire in one hour</p>'
                     };
-                      
+
                     transporter.sendMail(mailOptions, (error, info) => {
                         if (error) {
                             req.flash(`error`, `Error: Failed to send email: ` + error);
@@ -144,7 +224,7 @@ router.post('/forgotPassword', (req, res) => {
 
 router.get('/resetPassword/:token', (req, res) => {
     const token = req.params.token;
-    User.findOne({ token: token }, (err, user) => {
+    User.findOne({ token: token, tokenType: TOKEN_TYPE_FORGOT_PASSWORD }, (err, user) => {
         const tokenExpire = (user && user.tokenExpire ? user.tokenExpire.getTime() : 0);
         if (err || tokenExpire < Date.now()) {
             req.flash(`error`, `Error: Reset token expired, please try again`);
@@ -165,7 +245,7 @@ router.post('/resetPassword', (req, res) => {
     }
 
     // update the password
-    User.findOne({ token: token }, (err, user) => {
+    User.findOne({ token: token, tokenType: TOKEN_TYPE_FORGOT_PASSWORD }, (err, user) => {
         const tokenExpire = (user ? user.tokenExpire.getTime() : 0);
         if (err || tokenExpire < Date.now()) {
             req.flash(`error`, `Error: No user found or token expired`);
@@ -180,7 +260,7 @@ router.post('/resetPassword', (req, res) => {
 
             User.updateOne(
                 { _id: updatedUser._id },
-                { hash: updatedUser.hash, salt: updatedUser.salt, $unset: { token: 1, tokenExpire: 1 } },
+                { hash: updatedUser.hash, salt: updatedUser.salt, $unset: { token: 1, tokenExpire: 1, tokenType: 1 } },
                 (err, result) => {
                     if (err || result.modifiedCount != 1) {
                         req.flash(`error`, `Error: Failed to update password, please try again`);
@@ -194,14 +274,13 @@ router.post('/resetPassword', (req, res) => {
     });
 });
 
-function logoutCB(error)
-{
-    console.error(error);
-}
-
 router.get('/logout', (req, res) => {
     // this will trash the current session
-    req.logout({keepSessionInfo: false}, logoutCB);
+    req.logout({keepSessionInfo: false}, (error) => {
+        if (error) {
+            console.error(`Error during log out: ${error}`);
+        }
+    });
 
     req.flash(`success`, `Logged you out!`);
 

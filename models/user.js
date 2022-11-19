@@ -15,6 +15,7 @@ const UserSchema = new mongoose.Schema({
     ],
     token: String,
     tokenExpire: Date,
+    tokenType: Number,
 },
 {
   timestamps: true
