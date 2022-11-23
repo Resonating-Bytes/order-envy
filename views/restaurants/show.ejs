@@ -126,7 +126,7 @@
                 </div>
             </div>
         </h2>
-        <div class="menu-item-container">
+        <div class="menu-item-container container">
             <% restaurant.getCategories().forEach((category, catIdx) => { %>
                 <% if (catIdx > 0) { %>
                     <hr class="spacer dark-spacer low-margin">
@@ -144,51 +144,42 @@
                         <hr class="spacer low-margin">
                     <% } %>
 
-                    <div class="container">
-                        <div class="row">
-                            <div class="col-5 no-padding">
-                                <% if (user) { %>
-                                    <div class="container">
-                                        <div class="row">
-                                            <div class="col-5 low-padding">
-                                                <%
-                                                const avgRating = averageRating(menuItem.ratings, user);
-                                                if (typeof avgRating == 'number') {
-                                                %>
-                                                    <% const ri = getRatingInfo(ratingInfo, avgRating) %>
-                                                    <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
-                                                <%
-                                                }
-                                                %>
-                                            </div>
-                                            <div class="col-5 low-padding">
-                                                <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>/ratings/new" class="btn btn-xs btn-outline-primary bg-light float-right">
-                                                    <i class="fa-solid fa-plus"></i>
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </div>
+                    <div class="row no-margin">
+                        <div class="col-10 low-padding">
+                            <% if (user) { %>
+                                <div class="rating-btn low-padding">
+                                    <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>/ratings/new" class="btn btn-xs btn-outline-primary bg-light low-padding">
+                                        <%
+                                        const avgRating = averageRating(menuItem.ratings, user);
+                                        if (typeof avgRating == 'number') {
+                                        %>
+                                            <% const ri = getRatingInfo(ratingInfo, avgRating) %>
+                                            <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
+                                        <%
+                                        } else {
+                                        %>
+                                            <i class="fa-solid fa-plus"></i>
+                                        <%
+                                        }
+                                        %>
+                                    </a>
+                                </div>
+                            <% } %>
+                            <div class="rating-content">
+                                <h5 class="menuItem">
+                                    <%= menuItem.name %>
+                                </h5>
+                                <% if (menuItem.description) { %>
+                                    <%= menuItem.description %>
                                 <% } %>
                             </div>
-                            <div class="col-7 no-padding">
-                                <div class="row">
-                                    <div class="col-10 low-padding">
-                                        <h5 class="menuItem">
-                                            <%= menuItem.name %>
-                                        </h5>
-                                        <% if (menuItem.description) { %>
-                                            <%= menuItem.description %>
-                                        <% } %>
-                                    </div>
-                                    <div class="col-2 low-padding">
-                                        <% if (user) { %>
-                                        <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>" title="See all ratings">
-                                            <i class="fa-solid fa-circle-info"></i>
-                                        </a>
-                                        <% } %>
-                                    </div>
-                                </div>
-                            </div>
+                        </div>
+                        <div class="col-2 no-padding">
+                            <% if (user) { %>
+                            <a class="btn btn-outline-primary bg-light" href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>" title="See all ratings">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                            <% } %>
                         </div>
                     </div>
                 <% }); %>

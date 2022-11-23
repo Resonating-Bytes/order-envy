@@ -71,6 +71,15 @@ form textarea {
     width: 100%;
 }
 
+.rating-btn {
+    max-width: 100px;
+    display: inline-block;
+}
+
+.rating-content {
+    display: inline-block;
+}
+
 .menu-item-container {
     margin-bottom: 5px;
     padding: 5px;
@@ -155,6 +164,10 @@ form textarea {
     padding: 5px;
 }
 
+.no-margin {
+    margin: 0px;
+}
+
 .low-margin {
     margin: 8px;
 }
@@ -170,4 +183,10 @@ form textarea {
 .logo-icon{
     color: #007bff;
     font-size: 12vw;
+}
+
+@media only screen and (min-width: 700px) {
+    .hide-wide {
+        display: none;
+    }
 }

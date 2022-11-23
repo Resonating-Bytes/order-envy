@@ -31,23 +31,19 @@
                 <% } %>
 
                 <div class="row">
-                    <div class="col-5 no-padding">
-                        <div class="container">
-                            <div class="row">
-                                <div class="col-5 low-padding">
-                                    <% const ri = getRatingInfo(ratingInfo, ratingData.rating) %>
-                                    <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
-                                </div>
-                                <div class="col-5 low-padding">
-                                    <a class="btn btn-outline-warning bg-light float-right" href="<%= baseRatingLink %>/<%= ratingData._id %>">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                </div>
-                            </div>
+                    <div class="col">
+                        <div class="rating-btn">
+                            <% const ri = getRatingInfo(ratingInfo, ratingData.rating) %>
+                            <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
                         </div>
-                    </div>
-                    <div class="col-7 no-padding">
-                        <%= ratingData.comment %>
+                        <div class="rating-btn">
+                            <a class="btn btn-outline-warning bg-light" href="<%= baseRatingLink %>/<%= ratingData._id %>">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </div>
+                        <div class="rating-content low-padding">
+                            <%= ratingData.comment %>
+                        </div>
                     </div>
                 </div>
             <% }); %>
