@@ -25,6 +25,14 @@ UserSchema.methods.getDisplayName = function getDisplayName() {
     return limitText(this.firstName || this.username || '', 15);
 };
 
+UserSchema.methods.getFullName = function getFullName() {
+    if (this.firstName && this.lastName) {
+        return this.firstName + ` ` + this.lastName;
+    }
+    
+    return this.username;
+};
+
 UserSchema.plugin(passportLocalMongoose);
 
 module.exports = mongoose.model("User", UserSchema);

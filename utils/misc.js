@@ -2,6 +2,13 @@
  * Collection of random reusable utility functions
  */
 module.exports = {
+    TokenType: {
+        // define what token is being used for
+        NEW_ACCOUNT: 0,
+        FORGOT_PASSWORD: 1,
+        CONFIRM_FRIEND: 2,
+    },
+
     isOwner: (user, obj, param) => {
         const member = (obj ? obj[param] : {});
         if (typeof member === 'object' && member.length) {
@@ -37,7 +44,8 @@ module.exports = {
     getRatingInfo: (ratingInfo, rating) => {
         // make sure the rating stays in the bounds of the defined images
         // also have to convert from 1 based index to 0 based
-        return ratingInfo[Math.min(Math.max(rating - 1, 0), ratingInfo.length)];
+        const idx = Math.round(Math.min(Math.max(rating - 1, 0), ratingInfo.length));
+        return ratingInfo[idx];
     },
 
     getCookies: (request) => {
@@ -49,5 +57,16 @@ module.exports = {
             });
         }
         return cookies;
+    },
+
+    generateToken: () => {
+        var buf = new Buffer.alloc(16);
+        for (var i = 0; i < buf.length; i++) {
+            buf[i] = Math.floor(Math.random() * 256);
+        }
+    
+        // swap out characters that mess with the address
+        var id = buf.toString('base64').slice(0, -2).replaceAll(/=|\/|\?/g, '_');
+        return id;
     },
 }

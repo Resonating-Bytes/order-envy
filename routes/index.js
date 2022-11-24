@@ -6,20 +6,7 @@ const nodemailer = require('nodemailer');
 const Recommendation = require('../models/recommendation');
 const User = require('../models/user');
 
-// define what token is being used for
-const TOKEN_TYPE_NEW_ACCOUNT = 0
-const TOKEN_TYPE_FORGOT_PASSWORD = 1
-
-function generateToken() {
-    var buf = new Buffer.alloc(16);
-    for (var i = 0; i < buf.length; i++) {
-        buf[i] = Math.floor(Math.random() * 256);
-    }
-
-    // swap out characters that mess with the address
-    var id = buf.toString('base64').slice(0, -2).replaceAll(/=|\/|\?/g, '_');
-    return id;
-}
+const {generateToken, TokenType} = require('../utils/misc');
 
 // index route
 router.get('/', (req, res) => {
@@ -62,7 +49,7 @@ router.post('/register', (req, res) => {
         friends: [],
         token,
         tokenExpire,
-        tokenType: TOKEN_TYPE_NEW_ACCOUNT,
+        tokenType: TokenType.NEW_ACCOUNT,
     };
     User.register(new User(user), req.body.password, (err, newUser) => {
         if (err) {
@@ -114,7 +101,7 @@ router.post('/register', (req, res) => {
 
 router.get('/register/:token', (req, res) => {
     const token = req.params.token;
-    User.findOne({ token, tokenType: TOKEN_TYPE_NEW_ACCOUNT }, (err, user) => {
+    User.findOne({ token, tokenType: TokenType.NEW_ACCOUNT }, (err, user) => {
         const tokenExpire = (user && user.tokenExpire ? user.tokenExpire.getTime() : 0);
         if (err || tokenExpire < Date.now()) {
             if (user) {
@@ -145,7 +132,7 @@ router.get('/login', (req, res) => {
 router.post('/login', passport.authenticate('local', {
     failureRedirect: '/login',
 }), (req, res) => {
-    if (req.user.tokenType == TOKEN_TYPE_NEW_ACCOUNT) {
+    if (req.user.tokenType == TokenType.NEW_ACCOUNT) {
         if (req.user.tokenExpire.getTime() < Date.now()) {
             req.user.remove();
             req.flash(`error`, `Error: Account registration token expired, please register again`);
@@ -184,7 +171,7 @@ router.post('/forgotPassword', (req, res) => {
 
         User.updateOne(
             { _id: user._id },
-            { token, tokenExpire, tokenType: TOKEN_TYPE_FORGOT_PASSWORD },
+            { token, tokenExpire, tokenType: TokenType.FORGOT_PASSWORD },
             (err, result) => {
                 if (err || result.modifiedCount != 1) {
                     req.flash(`error`, `Error: Failed to generate reset token, please try again`);
@@ -224,7 +211,7 @@ router.post('/forgotPassword', (req, res) => {
 
 router.get('/resetPassword/:token', (req, res) => {
     const token = req.params.token;
-    User.findOne({ token: token, tokenType: TOKEN_TYPE_FORGOT_PASSWORD }, (err, user) => {
+    User.findOne({ token: token, tokenType: TokenType.FORGOT_PASSWORD }, (err, user) => {
         const tokenExpire = (user && user.tokenExpire ? user.tokenExpire.getTime() : 0);
         if (err || tokenExpire < Date.now()) {
             req.flash(`error`, `Error: Reset token expired, please try again`);
@@ -245,7 +232,7 @@ router.post('/resetPassword', (req, res) => {
     }
 
     // update the password
-    User.findOne({ token: token, tokenType: TOKEN_TYPE_FORGOT_PASSWORD }, (err, user) => {
+    User.findOne({ token: token, tokenType: TokenType.FORGOT_PASSWORD }, (err, user) => {
         const tokenExpire = (user ? user.tokenExpire.getTime() : 0);
         if (err || tokenExpire < Date.now()) {
             req.flash(`error`, `Error: No user found or token expired`);

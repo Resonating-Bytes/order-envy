@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router({mergeParams: true});
+const nodemailer = require('nodemailer');
 
 const isLoggedIn = require('../middleware/isLoggedIn');
+const Friends = require('../models/friends');
 const MenuItem = require('../models/menuItem');
 const Rating = require('../models/rating');
 const Restaurant = require('../models/restaurant');
 const User = require('../models/user');
-const { getRatingInfo } = require('../utils/misc');
+const { getRatingInfo, generateToken, TokenType } = require('../utils/misc');
 
 // 'index' route
 router.get('/', isLoggedIn, (req, res) => {
@@ -38,28 +40,150 @@ router.post('/', isLoggedIn, (req, res) => {
         if (err) {
             console.error(`Error: ${err.message}`);
             req.flash(`error`, `Error adding friend: ${err.message}`);
+            return res.redirect('back');
         } else if (foundUsers.length === 1) {
             const foundUser = foundUsers[0];
-            if (res.locals.user.friends.addToSet(foundUser).length) {
-                res.locals.user.save();
-            }
+            const token = generateToken();
+            const tokenExpire = new Date();
 
-            // add the current user to the friend's list as well
-            if (foundUser.friends.addToSet(res.locals.user)) {
-                foundUser.save();
-            }
+            // check if there are any pending friend requests for this pair
+            const friendQuery = {"$and": [{IDs: res.locals.user._id}, {IDs: foundUser._id}]};
+            // and for any expired requests for any users while we are at it
+            const dateQuery = {tokenExpire: {"$lt": tokenExpire}};
 
-            console.log('Added: ' + foundUser);
-            req.flash(`success`, `Successfully added friend!`);
+            // now that the date query is set, extend out the expire token for this operation
+            tokenExpire.setTime(tokenExpire.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+            Friends.find({"$or": [friendQuery, dateQuery]}, (err, oldFriends) => {
+                if (err) {
+                    console.error(`Error deleting old friend entries: ${err.message}`);
+                }
+
+                // remove found records
+                oldFriends.forEach((friend) => {
+                    friend.remove();
+                });
+
+                // then create the new friend request
+                const friends = {
+                    IDs: [res.locals.user._id, foundUser._id],
+                    token,
+                    tokenExpire,
+                    tokenType: TokenType.CONFIRM_FRIEND,
+                };
+                Friends.create(friends, (err, newFriend) => {
+                    if (err) {
+                        console.error(`Error: ${err.message}`);
+                        req.flash(`error`, `Error adding friend: ${err.message}`);
+                        return res.redirect('back');
+                    }
+
+                    const transporter = nodemailer.createTransport({
+                        service: 'gmail',
+                        auth: {
+                            user: process.env.EMAIL,
+                            pass: process.env.EMAIL_PASSWORD,
+                        }
+                    });
+
+                    const mailOptions = {
+                        from: 'no-reply@orderenvy.com',
+                        replyTo: 'no-reply@orderenvy.com',
+                        to: foundUser.username,
+                        subject: 'Confirm your Order Envy friend request',
+                        html: '<h1>You have a secret admirer</h1>' +
+                            '<p>Ok, maybe not exactly, but ' + res.locals.user.getFullName() + ' would like to be your friend on Order Envy!</p>' +
+                            '<p>Use <a href="' + req.headers.origin + '/users/' + res.locals.user._id + '/friends/confirm/' + token + '">this link</a> ' +
+                            'to confirm your friend request and help each other to enjoy your next meal more.</p>' +
+                            '<p>NOTE: the request will expire in one week</p>'
+                    };
+                
+                    transporter.sendMail(mailOptions, (error, info) => {
+                        if (error) {
+                            req.flash(`error`, `Error: Failed to invite friend: ` + error);
+                        } else {
+                            req.flash(`info`, `Request sent!`);
+                        }
+                        return res.redirect('back');
+                    });
+                });
+            });
         } else if (foundUsers.length === 0) {
             req.flash(`error`, `Failed to find a user with those details, please try again`);
             return res.redirect('back');
         } else {
             req.flash(`error`, `Found more than one user with those details, please be more specific`);
+            return res.redirect(`/users/${res.locals.user._id}`);
         }
+    });
+});
 
-        // succeed or fail, send them back to the friend index page
-        res.redirect(`/users/${res.locals.user._id}`);
+// 'confirm' route
+router.get('/confirm/:token', isLoggedIn, (req, res) => {
+    const token = req.params.token;
+    Friends.findOne({ token, tokenType: TokenType.CONFIRM_FRIEND }, (err, friendRequest) => {
+        const localUserID = res.locals.user._id;
+        if (err) {
+            console.error(`Error: ${err.message}`);
+            req.flash(`error`, `Error confirming friend: ${err.message}`);
+            return res.redirect(`/login`);
+        } else if (!(localUserID.equals(friendRequest.IDs[0]) || localUserID.equals(friendRequest.IDs[1]))) {
+            req.flash(`error`, `This invite isn't for you!`);
+            return res.redirect(`/login`);
+        } else if (friendRequest) {
+            const otherIdx = (localUserID.equals(friendRequest.IDs[0]) ? 1 : 0);
+            const otherFriendID = friendRequest.IDs[otherIdx];
+            User.findById(otherFriendID, (err, foundUser) => {
+                if (err) {
+                    console.error(`Error: Failed to find user`);
+                    return res.redirect(`/users/${res.locals.user._id}/friends`);
+                }
+
+                if (res.locals.user.friends.addToSet(otherFriendID).length) {
+                    res.locals.user.save();
+                }
+
+                // add the current user to the friend's list as well
+                if (foundUser.friends.addToSet(localUserID).length) {
+                    foundUser.save();
+                }
+
+                // delete the pending request
+                friendRequest.remove();
+
+                const transporter = nodemailer.createTransport({
+                    service: 'gmail',
+                    auth: {
+                        user: process.env.EMAIL,
+                        pass: process.env.EMAIL_PASSWORD,
+                    }
+                });
+
+                const mailOptions = {
+                    from: 'no-reply@orderenvy.com',
+                    replyTo: 'no-reply@orderenvy.com',
+                    to: foundUser.username,
+                    subject: 'You have a new friend!',
+                    html: '<h1>They like you... they REALLY like you!</h1>' +
+                        '<p>' + res.locals.user.getFullName() + ' confirmed your friend request on Order Envy!</p>' +
+                        '<p>Now go and help each other enjoy your meals more and regret less</p>' +
+                        '<a href="' + req.headers.origin + '">OrderEnvy</a>'
+                };
+            
+                transporter.sendMail(mailOptions, (error, info) => {
+                    if (error) {
+                        req.flash(`error`, `Error: Failed to confirm friend: ` + error);
+                        return res.redirect(`/users/${res.locals.user._id}/friends`);
+                    }
+                });
+
+                req.flash(`success`, `Successfully added friend!`);
+                return res.redirect(`/users/${res.locals.user._id}/friends`);
+            });
+        } else {
+            req.flash(`error`, `Failed to find a user with those details or invite expired, please try again`);
+            return res.redirect('back');
+        }
     });
 });
 
@@ -156,7 +280,7 @@ router.get('/:friendID', isLoggedIn, (req, res) => {
                             const urlBase = `/users/${res.locals.user._id}/friends/${req.params.friendID}?p=`;
                             const prevPage = (page > 0 ? urlBase + (Number(page) - 1) : undefined);
                             const nextPage = (end < count ? urlBase + (Number(page) + 1) : undefined);
-                            const friendName = friend.getDisplayName();
+                            const friendName = friend.getFullName();
                             res.render('friends/show', { friendName, recent, prevPage, nextPage, getRatingInfo });
                         });
                     });
