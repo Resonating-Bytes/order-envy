@@ -23,6 +23,24 @@
                 </div>
             </div>
         <% }); %>
+        <% if (pendingFriends.length) { %>
+            <h1 class="header-text">Pending Friends</h1>
+            <% pendingFriends.forEach((friendRequest) => { %>
+                <% const friend = (friendRequest.IDs[0]._id.equals(user._id) ? friendRequest.IDs[1] : friendRequest.IDs[0]); %>
+                <div class="row new-item-form">
+                    <div class="col-9 centered">
+                        <%= friend.getDisplayName() %>
+                    </div>
+                    <div class="col-3">
+                        <!-- <form class="delete-item" action="/users/<%= user._id %>/friends/<%= friend._id %>?_method=DELETE" onsubmit="return deleteConfirm(`<%= friend.name %>`)" method="POST">
+                            <button class="btn btn-outline-danger">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form> -->
+                    </div>
+                </div>
+            <% }); %>
+        <% } %>
 
         <% if (user.friends.length > 5) { %>
             <%- include("../partials/newFriend") %>

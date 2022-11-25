@@ -12,11 +12,13 @@ const { getRatingInfo, generateToken, TokenType } = require('../utils/misc');
 
 // 'index' route
 router.get('/', isLoggedIn, (req, res) => {
-    if (req.user._id.equals(req.params.userID)) {
-        return res.render('friends/index');
-    }
+    Friends.find({IDs: res.locals.user._id}).populate('IDs').exec((err, pendingFriends) => {
+        if (err) {
+            return res.redirect('back');
+        }
 
-    res.redirect('back');
+        return res.render('friends/index', { pendingFriends });
+    });
 });
 
 // 'new' route
