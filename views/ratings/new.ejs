@@ -1,11 +1,26 @@
 <%- include("../partials/header") %>
 
+    <script>
+        function validateRating() {
+            const ratingOptions = document.forms["ratingForm"]["ratingData[rating]"];
+            for (let i = 0; i < ratingOptions.length; i++) {
+                const rating = ratingOptions[i];
+                if (rating.checked) {
+                    return true;
+                }
+            }
+
+            alert("Please select a rating first");
+            return false;
+        }
+    </script>
+
     <div style="text-align:center">
         <h1>Add a rating</h1>
     </div>
 
     <div class="new-item-form">
-        <form class="form-inline" action="<%= restaurantRoute %><%= menuItemRoute %>/ratings" method="POST">
+        <form class="form-inline" name="ratingForm" action="<%= restaurantRoute %><%= menuItemRoute %>/ratings" onsubmit="return validateRating()" method="POST">
             <%- include("../partials/ratingInput") %>
             <%- include("../partials/formButtons") %>
         </form>
