@@ -17,7 +17,11 @@ router.get('/', isLoggedIn, (req, res) => {
             return res.redirect('back');
         }
 
-        return res.render('friends/index', { pendingFriends });
+        pendingFriends = pendingFriends.filter((value, idx, arr) => {
+            return value.IDs[1].equals(res.locals.user._id);
+        });
+
+        return res.render('friends/index', { baseURL: req.headers.origin, pendingFriends });
     });
 });
 
@@ -104,7 +108,7 @@ router.post('/', isLoggedIn, (req, res) => {
                         if (error) {
                             req.flash(`error`, `Error: Failed to invite friend: ` + error);
                         } else {
-                            req.flash(`info`, `Request sent!`);
+                            req.flash(`success`, `Request sent!`);
                         }
                         return res.redirect('back');
                     });
@@ -185,6 +189,20 @@ router.get('/confirm/:token', isLoggedIn, (req, res) => {
         } else {
             req.flash(`error`, `Failed to find a user with those details or invite expired, please try again`);
             return res.redirect('back');
+        }
+    });
+});
+
+// 'decline' route
+router.delete('/decline/:token', isLoggedIn, (req, res) => {
+    const token = req.params.token;
+    Friends.findOne({ token, tokenType: TokenType.CONFIRM_FRIEND }, (err, friendRequest) => {
+        res.redirect('back');
+        if (err || !friendRequest || friendRequest.IDs.indexOf(res.locals.user._id) == -1) {
+            req.flash(`error`, `Failed to find a user with those details, please try again`);
+        } else {
+            friendRequest.remove();
+            req.flash(`success`, `Request removed`);
         }
     });
 });
@@ -306,10 +324,23 @@ router.put('/:friendID', isLoggedIn, (req, res) => {
 
 // 'delete' route
 router.delete('/:friendID', isLoggedIn, (req, res) => {
-    const { user } = res.locals;
-    user.friends = user.friends.filter((friend) => { return !friend._id.equals(req.params.friendID); });
-    user.save();
-    res.redirect('back');
+    User.findById(req.params.friendID, (err, foundUser) => {
+        if (err || !foundUser) {
+            req.flash(`error`, `Failed to find a user with those details, please try again`);
+        } else {
+            // remove the specified ID from the current user friend list
+            const { user } = res.locals;
+            user.friends = user.friends.filter((friend) => { return !friend._id.equals(foundUser._id); });
+            user.save();
+
+            // now remove this user from the friend
+            foundUser.friends = foundUser.friends.filter((friend) => { return !friend._id.equals(user._id); });
+            foundUser.save();
+        }
+
+        res.redirect('back');
+        req.flash(`success`, `Friend removed!`);
+    });
 });
 
 module.exports = router;

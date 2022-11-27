@@ -115,7 +115,7 @@ router.get('/register/:token', (req, res) => {
             user.tokenExpire = undefined;
             user.tokenType = undefined;
             user.save();
-            req.flash(`info`, `Account validated!`);
+            req.flash(`success`, `Account validated!`);
             return res.redirect('/login');
         }
     });
@@ -200,7 +200,7 @@ router.post('/forgotPassword', (req, res) => {
                             req.flash(`error`, `Error: Failed to send email: ` + error);
                             return res.redirect('/forgotPassword');
                         } else {
-                            req.flash(`info`, `Success!`);
+                            req.flash(`success`, `Success!`);
                             return res.render('resetSent', {email: email});
                         }
                     });

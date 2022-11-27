@@ -15,7 +15,7 @@
                     </a>
                 </div>
                 <div class="col-3">
-                    <form class="delete-item" action="/users/<%= user._id %>/friends/<%= friend._id %>?_method=DELETE" onsubmit="return deleteConfirm(`<%= friend.name %>`)" method="POST">
+                    <form class="delete-item" action="/users/<%= user._id %>/friends/<%= friend._id %>?_method=DELETE" onsubmit="return deleteConfirm(`<%= friend.getDisplayName() %>`)" method="POST">
                         <button class="btn btn-outline-danger">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -29,14 +29,17 @@
                 <% const friend = (friendRequest.IDs[0]._id.equals(user._id) ? friendRequest.IDs[1] : friendRequest.IDs[0]); %>
                 <div class="row new-item-form">
                     <div class="col-9 centered">
-                        <%= friend.getDisplayName() %>
+                        <a href="<%= baseURL %>/users/<%= user._id %>/friends/confirm/<%= friendRequest.token %>" class="btn btn-outline-success">
+                            <%= friend.getDisplayName() %>
+                            <i class="fa-solid fa-check float-right"></i>
+                        </a>
                     </div>
                     <div class="col-3">
-                        <!-- <form class="delete-item" action="/users/<%= user._id %>/friends/<%= friend._id %>?_method=DELETE" onsubmit="return deleteConfirm(`<%= friend.name %>`)" method="POST">
+                        <form class="delete-item" action="/users/<%= user._id %>/friends/decline/<%= friendRequest.token %>?_method=DELETE" onsubmit="return deleteConfirm(`this request`)" method="POST">
                             <button class="btn btn-outline-danger">
                                 <i class="fas fa-trash"></i>
                             </button>
-                        </form> -->
+                        </form>
                     </div>
                 </div>
             <% }); %>

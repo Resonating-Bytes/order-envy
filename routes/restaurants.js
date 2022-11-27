@@ -4,10 +4,12 @@ const router = express.Router({mergeParams: true});
 const isLoggedIn = require('../middleware/isLoggedIn');
 const { canEditRestaurant } = require('../middleware/restaurant');
 const { filterUserOwned, getCookies, getRatingInfo } = require('../utils/misc');
+const Friends = require('../models/friends');
 const List = require('../models/list');
 const Recommendation = require('../models/recommendation');
 const Note = require('../models/note');
 const Restaurant = require('../models/restaurant');
+const friends = require('../models/friends');
 
 // 'index' route
 router.get('/', (req, res) => {
@@ -62,12 +64,18 @@ router.get('/', (req, res) => {
                         <option value="all">All</option>
                     </select>`;
 
+                    const userId = (res.locals.user || {})._id;
+                    Friends.find({IDs: userId}, (err, friendRequests) => {
+                        if (!err && friendRequests && friendRequests.length) {
+                            req.flash(`success`, `You have pending friend requests <a href="/users/${req.user._id}/friends">here</a>`);
+                        }
 
-                    res.render('restaurants/index', {
-                        restaurants: filterByDist(restaurants),
-                        recommendations,
-                        onload: `"loadFilterByDistance('${filterDistStr}'); findMe('cookie');"`,
-                        headerContent,
+                        res.render('restaurants/index', {
+                            restaurants: filterByDist(restaurants),
+                            recommendations,
+                            onload: `"loadFilterByDistance('${filterDistStr}'); findMe('cookie');"`,
+                            headerContent,
+                        });
                     });
                 }
             });
