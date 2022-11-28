@@ -20,7 +20,6 @@ router.get('/', isLoggedIn, (req, res) => {
 
     Recommendation.findOneAndUpdate(recommendation, recommendation, options, (err, createdRecommendation) => {
         if (err) {
-            console.error(`Error: ${err.message}`);
             flash(req, res, FlashType.ERROR, `Error rendering lists: ${err.message}`);
         } else {
             if (createdRecommendation.from.addToSet(res.locals.user).length) {

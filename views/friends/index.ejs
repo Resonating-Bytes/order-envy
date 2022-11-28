@@ -3,8 +3,28 @@
     <%- include("../partials/deleteConfirm") %>
 
     <div class="centered">
-        <h1 class="header-text">Friends</h1>
+        <% if (friendRequests.length) { %>
+            <h1 class="header-text">Friend Requests</h1>
+            <% friendRequests.forEach((friendRequest) => { %>
+                <div class="row new-item-form">
+                    <div class="col-9 centered">
+                        <a href="<%= baseURL %>/users/<%= user._id %>/friends/confirm/<%= friendRequest.token %>" class="btn btn-outline-success">
+                            <%= friendRequest.source.getDisplayName() %>
+                            <i class="fa-solid fa-check float-right"></i>
+                        </a>
+                    </div>
+                    <div class="col-3">
+                        <form class="delete-item" action="/users/<%= user._id %>/friends/decline/<%= friendRequest.token %>?_method=DELETE" onsubmit="return deleteConfirm(`this request`)" method="POST">
+                            <button class="btn btn-outline-danger">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            <% }); %>
+        <% } %>
 
+        <h1 class="header-text">Friends</h1>
         <%- include("../partials/newFriend") %>
 
         <% user.friends.forEach((friend) => { %>
@@ -23,27 +43,6 @@
                 </div>
             </div>
         <% }); %>
-        <% if (pendingFriends.length) { %>
-            <h1 class="header-text">Pending Friends</h1>
-            <% pendingFriends.forEach((friendRequest) => { %>
-                <% const friend = (friendRequest.IDs[0]._id.equals(user._id) ? friendRequest.IDs[1] : friendRequest.IDs[0]); %>
-                <div class="row new-item-form">
-                    <div class="col-9 centered">
-                        <a href="<%= baseURL %>/users/<%= user._id %>/friends/confirm/<%= friendRequest.token %>" class="btn btn-outline-success">
-                            <%= friend.getDisplayName() %>
-                            <i class="fa-solid fa-check float-right"></i>
-                        </a>
-                    </div>
-                    <div class="col-3">
-                        <form class="delete-item" action="/users/<%= user._id %>/friends/decline/<%= friendRequest.token %>?_method=DELETE" onsubmit="return deleteConfirm(`this request`)" method="POST">
-                            <button class="btn btn-outline-danger">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            <% }); %>
-        <% } %>
 
         <% if (user.friends.length > 5) { %>
             <%- include("../partials/newFriend") %>

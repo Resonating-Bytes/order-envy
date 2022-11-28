@@ -9,7 +9,6 @@ module.exports = {
     cacheRating: (req, res, next) => {
         Rating.findById(req.params.ratingID, (err, ratingData) => {
             if (err) {
-                console.error(`Error: ${err.message}`);
                 flash(req, res, FlashType.ERROR, `Rating not found: ${err.message}`);
                 return res.redirect(`back`);
             }

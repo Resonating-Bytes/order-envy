@@ -9,7 +9,6 @@ module.exports = {
     cacheList: (req, res, next) => {
         List.findById(req.params.listID, (err, list) => {
             if (err) {
-                console.error(`Error: ${err.message}`);
                 flash(req, res, FlashType.ERROR, `List not found: ${err.message}`);
                 return res.redirect(`back`);
             }

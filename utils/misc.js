@@ -1,19 +1,23 @@
 /**
  * Collection of random reusable utility functions
  */
-module.exports = {
-    FlashType: {
-        ERROR: 'error',
-        WARNING: 'warning',
-        SUCCESS: 'success',
-    },
+ let FlashType = {
+    ERROR: 'error',
+    WARNING: 'warning',
+    SUCCESS: 'success',
+    INFO: 'info',
+}
 
-    TokenType: {
-        // define what token is being used for
-        NEW_ACCOUNT: 0,
-        FORGOT_PASSWORD: 1,
-        CONFIRM_FRIEND: 2,
-    },
+let TokenType = {
+    // define what token is being used for
+    NEW_ACCOUNT: 0,
+    FORGOT_PASSWORD: 1,
+    CONFIRM_FRIEND: 2,
+}
+
+module.exports = {
+    FlashType,
+    TokenType,
 
     isOwner: (user, obj, param) => {
         const member = (obj ? obj[param] : {});
@@ -91,5 +95,25 @@ module.exports = {
                 res.locals[type] = [msg];
             }
         }
+    
+        switch (type) {
+        case FlashType.ERROR:
+            console.error(msg);
+            break;
+    
+        case FlashType.WARNING:
+            console.warn(msg);
+            break;
+    
+        default:
+            console.log(msg);
+            break;
+        }
     },
+
+    getActiveFriendRequestsQuery: (userId) => {
+        const tokenExpire = new Date();
+        const dateQuery = {tokenExpire: {"$gt": tokenExpire}};
+        return {"$and": [{request: userId}, dateQuery]};
+    },    
 }

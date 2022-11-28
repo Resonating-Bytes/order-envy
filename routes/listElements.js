@@ -11,7 +11,6 @@ router.get('/addRestaurant/:restaurantID', userOwnsList, (req, res) => {
     if (list) {
         Restaurant.findById(req.params.restaurantID, (err, foundRestaurant) => {
             if (err) {
-                console.error(`Error: ${err.message}`);
                 flash(req, res, FlashType.ERROR, `Error rendering lists: ${err.message}`);
             } else if (list.restaurants.addToSet(foundRestaurant).length) {
                 const idx = list.restaurants.indexOf(foundRestaurant);

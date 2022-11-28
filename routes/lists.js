@@ -11,7 +11,6 @@ const User = require('../models/user');
 router.get('/', isLoggedIn, (req, res) => {
     List.find({users: res.locals.user}, (err, lists) => {
         if (err) {
-            console.error(`Error: ${err.message}`);
             flash(req, res, FlashType.ERROR, `Error rendering lists: ${err.message}`);
             res.redirect('/');
         } else {
@@ -33,11 +32,9 @@ router.post('/', isLoggedIn, (req, res) => {
     
     List.create(newList, (err, createdList) => {
         if (err) {
-            console.error(`Error: ${err.message}`);
             flash(req, res, FlashType.ERROR, `Error creating list: ${err.message}`);
         } else {
-            console.log('Created: ' + createdList);
-            flash(req, res, FlashType.SUCCESS, `Successfully created list!`);
+            flash(req, res, FlashType.SUCCESS, `Successfully created list ${createdList}!`);
         }
 
         // succeed or fail, send them to the same place
@@ -55,7 +52,6 @@ router.post('/', isLoggedIn, (req, res) => {
 router.get('/:listID', isLoggedIn, (req, res) => {
     List.findById(req.params.listID).populate('restaurants').exec((err, foundList) => {
         if (err) {
-            console.error(`Error: ${err.message}`);
             flash(req, res, FlashType.ERROR, `Error creating list: ${err.message}`);
             return res.redirect('back');
         } else {
@@ -96,7 +92,6 @@ router.delete('/:listID', userOwnsList, (req, res) => {
     if (list) {
         list.remove((err) => {
             if (err) {
-                console.error(`Error: ${err.message}`);
                 flash(req, res, FlashType.ERROR, `Failed to remove list: ${err.message}`);
             } else {
                 flash(req, res, FlashType.SUCCESS, `List deleted`);

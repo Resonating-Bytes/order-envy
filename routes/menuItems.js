@@ -30,12 +30,10 @@ router.post('/', isLoggedIn, cacheRestaurant, (req, res) => {
     const { menuItem } = req.body;
     MenuItem.create(menuItem, (err, createdMenuItem) => {
         if (err) {
-            console.error(`Error: ${err.message}`);
             flash(req, res, FlashType.ERROR, `Error creating menuItem: ${err.message}`);
             return res.redirect('back');
         } else {
-            console.log('Created: ' + createdMenuItem);
-            flash(req, res, FlashType.SUCCESS, `Successfully created menu item!`);
+            flash(req, res, FlashType.SUCCESS, `Successfully created menu item ${createdMenuItem}!`);
             const { restaurant } = res.locals;
             if (restaurant) {
                 restaurant.menuItems.push(createdMenuItem);
@@ -56,12 +54,12 @@ router.get('/:menuItemID', cacheRestaurant, (req, res) => {
 
     MenuItem.findById(req.params.menuItemID).populate({path: 'ratings', options: {sort: {'createdAt': -1}}}).exec((err, menuItem) => {
         if (err) {
-            console.error(`Error: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Error getting menu item: ${err.message}`);
             return res.redirect(`/restaurants`);
         } else {
             Note.findOne({ about: menuItem, user: res.locals.user }, (err, note) => {
                 if (err) {
-                    console.error(`Error fetching note: ${err.message}`);
+                    flash(req, res, FlashType.ERROR, `Error fetching note: ${err.message}`);
                     return res.redirect(`/restaurants`);
                 } else {
                     if (!('ratings' in res.locals)) {
@@ -102,7 +100,6 @@ router.delete('/:menuItemID', canEditMenuItem, cacheRestaurant, (req, res) => {
     if (menuItem) {
         menuItem.remove((err) => {
             if (err) {
-                console.error(`Error: ${err.message}`);
                 flash(req, res, FlashType.ERROR, `Failed to remove menuItem: ${err.message}`);
             } else {
                 flash(req, res, FlashType.SUCCESS, `Menu item deleted`);

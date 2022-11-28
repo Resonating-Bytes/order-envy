@@ -7,7 +7,7 @@ const Friends = require('../models/friends');
 const Recommendation = require('../models/recommendation');
 const User = require('../models/user');
 
-const { flash, FlashType, generateToken, TokenType } = require('../utils/misc');
+const { flash, FlashType, generateToken, getActiveFriendRequestsQuery, TokenType } = require('../utils/misc');
 
 // index route
 router.get('/', (req, res) => {
@@ -18,7 +18,6 @@ router.get('/', (req, res) => {
 
     Recommendation.find({for: (req.user || {})._id}).populate('restaurant').populate('menuItem').sort('-updatedAt').exec((err, recommendations) => {
         if (err) {
-            console.error(err);
             flash(req, res, FlashType.ERROR, `Failed to grab recommendations: ${err.message}`);
         }
         const numRecs = req.query.numRecs || 5;
@@ -54,7 +53,6 @@ router.post('/register', (req, res) => {
     };
     User.register(new User(user), req.body.password, (err, newUser) => {
         if (err) {
-            console.error(err);
             flash(req, res, FlashType.ERROR, `Failed to register user: ${err.message}`);
             return res.redirect('/register');
         }
@@ -90,7 +88,7 @@ router.post('/register', (req, res) => {
                 } else {
                     req.logout({keepSessionInfo: false}, (err) => {
                         if (err) {
-                            console.log(`Error while logging out: ${err}`);
+                            flash(req, res, FlashType.ERROR, `Error while logging out: ${err}`);
                         }
                         return res.render('registerSent');
                     });
@@ -130,8 +128,13 @@ router.get('/login', (req, res) => {
     res.render('login');
 });
 
+router.get('/loginFailed', (req, res) => {
+    flash(req, res, FlashType.ERROR, `Username or password incorrect, please try again`);
+    res.redirect('/login');
+});
+
 router.post('/login', passport.authenticate('local', {
-    failureRedirect: '/login',
+    failureRedirect: '/loginFailed',
 }), (req, res) => {
     if (req.user.tokenType == TokenType.NEW_ACCOUNT) {
         if (req.user.tokenExpire.getTime() < Date.now()) {
@@ -140,18 +143,15 @@ router.post('/login', passport.authenticate('local', {
             return res.redirect('/register');
         } else {
             req.logout({keepSessionInfo: false}, (err) => {
-                if (err) {
-                    console.log(`Error while logging out: ${err}`);
-                }
-                flash(req, res, FlashType.ERROR, `Error: Account must be validated first, please check your email`);
+                flash(req, res, FlashType.ERROR, `Error: Account must be validated first, please check your email\n${err}`);
                 return res.redirect(`back`);
             });
         }
     } else {
-        const userId = req.user._id;
-        Friends.find({IDs: userId}, (err, friendRequests) => {
-            if (!err && friendRequests && friendRequests.length) {
-                flash(req, res, FlashType.SUCCESS, `You have pending friend requests <a href="/users/${req.user._id}/friends" class="btn btn-outline btn-outline-primary">here</a>`);
+        Friends.find(getActiveFriendRequestsQuery(req.user._id)).count((err, friendRequestCount) => {
+            if (!err && friendRequestCount) {
+                const baseMsg = (friendRequestCount == 1 ? `You have a pending friend request` : `You have pending friend requests`);
+                flash(req, res, FlashType.INFO, `${baseMsg} <a href="/users/${req.user._id}/friends" class="btn btn-outline btn-outline-primary">here</a>`);
             }
 
             return res.redirect('/restaurants');
@@ -273,7 +273,7 @@ router.get('/logout', (req, res) => {
     // this will trash the current session
     req.logout({keepSessionInfo: false}, (error) => {
         if (error) {
-            console.error(`Error during log out: ${error}`);
+            flash(req, res, FlashType.ERROR, `Error during log out: ${error}`);
         }
     });
 

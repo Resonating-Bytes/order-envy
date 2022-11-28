@@ -42,16 +42,13 @@ router.post('/', isLoggedIn, cacheRestaurant, cacheMenuItem, (req, res) => {
         if (foundNote) {
             Object.assign(foundNote, newNote);
             foundNote.save();
-            console.log('Updated: ' + foundNote);
             flash(req, res, FlashType.SUCCESS, `Successfully updated note!`);
             return res.redirect('back');
         } else {
             Note.create(newNote, (err, createdNote) => {
                 if (err) {
-                    console.error(`Error: ${err.message}`);
                     flash(req, res, FlashType.ERROR, `Error creating rating: ${err.message}`);
                 } else {
-                    console.log('Created: ' + createdNote);
                     flash(req, res, FlashType.SUCCESS, `Successfully saved note!`);
                 }
                 return res.redirect('back');

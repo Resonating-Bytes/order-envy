@@ -9,7 +9,6 @@ module.exports = {
     cacheMenuItem: (req, res, next) => {
         MenuItem.findById(req.params.menuItemID, (err, menuItem) => {
             if (err) {
-                console.error(`Error: ${err.message}`);
                 flash(req, res, FlashType.ERROR, ` not found: ${err.message}`);
                 return res.redirect(`back`);
             }

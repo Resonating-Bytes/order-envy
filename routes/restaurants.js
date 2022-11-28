@@ -19,12 +19,12 @@ router.get('/', (req, res) => {
 
     Restaurant.find({}).sort('name').exec((err, restaurants) => {
         if (err) {
-            console.error(`Error getting restaurants: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Error getting restaurants: ${err.message}`);
             res.redirect('/');
         } else {
             Recommendation.find({ for: req.user, menuItem: undefined }).populate('restaurant').exec((err, recommendations) => {
                 if (err) {
-                    console.error(`Error getting restaurants: ${err.message}`);
+                    flash(req, res, FlashType.ERROR, `Error getting restaurants: ${err.message}`);
                     res.redirect('/');
                 } else {
                     const cookies = getCookies(req);
@@ -95,11 +95,9 @@ router.post('/', isLoggedIn, (req, res) => {
 
     Restaurant.create(newRestaurant, (err, createdRestaurant) => {
         if (err) {
-            console.error(`Error: ${err.message}`);
             flash(req, res, FlashType.ERROR, `Error creating restaurant: ${err.message}`);
             return res.redirect(`back`);
         } else {
-            console.log('Created: ' + createdRestaurant);
             flash(req, res, FlashType.SUCCESS, `Successfully created restaurant!`);
             return res.redirect(`/restaurants/${createdRestaurant._id}`);
         }
@@ -125,22 +123,22 @@ function averageRating(ratings, user) {
 router.get('/:restaurantID', (req, res) => {
     Restaurant.findById(req.params.restaurantID).populate({path: 'menuItems', options: {sort: 'name'}, populate: {path: 'ratings', options: {sort: {'createdAt': -1}}}}).populate({path: 'ratings', options: {sort: {'createdAt': -1}}}).exec((err, restaurant) => {
         if (err) {
-            console.error(`Error: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Error getting restaurant: ${err.message}`);
             return res.redirect(`/restaurants`);
         } else {
             List.find({ users: res.locals.user }, (err, lists) => {
                 if (err) {
-                    console.error(`Error fetching lists: ${err.message}`);
+                    flash(req, res, FlashType.ERROR, `Error fetching lists: ${err.message}`);
                     return res.redirect(`/restaurants`);
                 } else {
                     Recommendation.find({ for: req.user, restaurant: req.params.restaurantID }).where('menuItem').ne(null).populate('menuItem').exec((err, recommendations) => {
                         if (err) {
-                            console.error(`Error fetching recommendations: ${err.message}`);
+                            flash(req, res, FlashType.ERROR, `Error fetching recommendations: ${err.message}`);
                             return res.redirect(`/restaurants`);
                         } else {
                             Note.findOne({ about: restaurant, user: res.locals.user }, (err, note) => {
                                 if (err) {
-                                    console.error(`Error fetching note: ${err.message}`);
+                                    flash(req, res, FlashType.ERROR, `Error fetching note: ${err.message}`);
                                     return res.redirect(`/restaurants`);
                                 } else {
                                     if (!('ratings' in res.locals)) {
@@ -193,7 +191,6 @@ router.delete('/:restaurantID', canEditRestaurant, (req, res) => {
     if (restaurant) {
         restaurant.remove((err) => {
             if (err) {
-                console.error(`Error: ${err.message}`);
                 flash(req, res, FlashType.ERROR, `Failed to remove restaurant: ${err.message}`);
             } else {
                 flash(req, res, FlashType.SUCCESS, `Restaurant deleted`);

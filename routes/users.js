@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router({mergeParams: true});
 
 const isLoggedIn = require('../middleware/isLoggedIn');
+const Friends = require('../models/friends');
+const User = require('../models/user');
 const { flash, FlashType } = require('../utils/misc');
 
 // 'index' route
@@ -63,19 +65,35 @@ router.put('/:userID', isLoggedIn, (req, res) => {
 // 'delete' route
 router.delete('/:userID', isLoggedIn, (req, res) => {
     if (req.user._id.equals(req.params.userID)) {
-        if (window.confirm(`This will permanently delete your account, are you sure?`)) {
-            req.user.remove((err) => {
-                if (err) {
-                    console.error(`Error: ${err.message}`);
-                    flash(req, res, FlashType.ERROR, `Failed to remove user: ${err.message}`);
-                } else {
-                    flash(req, res, FlashType.SUCCESS, `User deleted`);
-                }
-                return res.redirect(`/`);
-            });
-        } else {
-            return res.redirect(`back`);
-        }
+        const deletedUserId = req.user._id;
+        req.user.remove((err) => {
+            if (err) {
+                flash(req, res, FlashType.ERROR, `Failed to remove user: ${err.message}`);
+            } else {
+                flash(req, res, FlashType.SUCCESS, `User deleted`);
+
+                // clean the user ID from other user friend lists
+                User.find({friends: deletedUserId}, (err, users) => {
+                    if (!err && users) {
+                        users.forEach((user) => {
+                            user.friends = user.friends.filter((friend) => { return !friend._id.equals(deletedUserId); });
+                            user.save();
+                        });
+                    }
+                });
+
+                // clean any pending friend requests as well
+                Friends.find({"$or": [{source: deletedUserId}, {request: deletedUserId}]}, (err, friendRequests) => {
+                    if (!err && friendRequests) {
+                        friendRequests.forEach((request) => {
+                            request.remove();
+                        });
+                    }
+                });
+            }
+
+            return res.redirect(`/logout`);
+        });
     }
 });
 

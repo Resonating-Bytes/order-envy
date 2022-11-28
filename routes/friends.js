@@ -8,20 +8,16 @@ const MenuItem = require('../models/menuItem');
 const Rating = require('../models/rating');
 const Restaurant = require('../models/restaurant');
 const User = require('../models/user');
-const { flash, FlashType, getRatingInfo, generateToken, TokenType } = require('../utils/misc');
+const { flash, FlashType, getActiveFriendRequestsQuery, getRatingInfo, generateToken, TokenType } = require('../utils/misc');
 
 // 'index' route
 router.get('/', isLoggedIn, (req, res) => {
-    Friends.find({IDs: res.locals.user._id}).populate('IDs').exec((err, pendingFriends) => {
+    Friends.find(getActiveFriendRequestsQuery(res.locals.user._id)).populate('source').exec((err, friendRequests) => {
         if (err) {
             return res.redirect('back');
         }
 
-        pendingFriends = pendingFriends.filter((value, idx, arr) => {
-            return value.IDs[1].equals(res.locals.user._id);
-        });
-
-        return res.render('friends/index', { baseURL: req.headers.origin, pendingFriends });
+        return res.render('friends/index', { baseURL: req.headers.origin, friendRequests });
     });
 });
 
@@ -44,7 +40,6 @@ function clean(obj) {
 router.post('/', isLoggedIn, (req, res) => {
     User.find(clean(req.body.friend), (err, foundUsers) => {
         if (err) {
-            console.error(`Error: ${err.message}`);
             flash(req, res, FlashType.ERROR, `Error adding friend: ${err.message}`);
             return res.redirect('back');
         } else if (foundUsers.length === 1) {
@@ -53,7 +48,7 @@ router.post('/', isLoggedIn, (req, res) => {
             const tokenExpire = new Date();
 
             // check if there are any pending friend requests for this pair
-            const friendQuery = {"$and": [{IDs: res.locals.user._id}, {IDs: foundUser._id}]};
+            const friendQuery = {"$and": [{source: res.locals.user._id}, {request: foundUser._id}]};
             // and for any expired requests for any users while we are at it
             const dateQuery = {tokenExpire: {"$lt": tokenExpire}};
 
@@ -63,23 +58,23 @@ router.post('/', isLoggedIn, (req, res) => {
             Friends.find({"$or": [friendQuery, dateQuery]}, (err, oldFriends) => {
                 if (err) {
                     console.error(`Error deleting old friend entries: ${err.message}`);
+                } else {
+                    // remove found records
+                    oldFriends.forEach((friend) => {
+                        friend.remove();
+                    });
                 }
-
-                // remove found records
-                oldFriends.forEach((friend) => {
-                    friend.remove();
-                });
 
                 // then create the new friend request
                 const friends = {
-                    IDs: [res.locals.user._id, foundUser._id],
+                    source: res.locals.user._id,
+                    request: foundUser._id,
                     token,
                     tokenExpire,
                     tokenType: TokenType.CONFIRM_FRIEND,
                 };
                 Friends.create(friends, (err, newFriend) => {
-                    if (err) {
-                        console.error(`Error: ${err.message}`);
+                    if (err || !newFriend) {
                         flash(req, res, FlashType.ERROR, `Error adding friend: ${err.message}`);
                         return res.redirect('back');
                     }
@@ -129,23 +124,20 @@ router.get('/confirm/:token', isLoggedIn, (req, res) => {
     const token = req.params.token;
     Friends.findOne({ token, tokenType: TokenType.CONFIRM_FRIEND }, (err, friendRequest) => {
         const localUserID = res.locals.user._id;
-        if (err) {
-            console.error(`Error: ${err.message}`);
+        if (err || !friendRequest) {
             flash(req, res, FlashType.ERROR, `Error confirming friend: ${err.message}`);
             return res.redirect(`/login`);
-        } else if (!(localUserID.equals(friendRequest.IDs[0]) || localUserID.equals(friendRequest.IDs[1]))) {
+        } else if (!localUserID.equals(friendRequest.request)) {
             flash(req, res, FlashType.ERROR, `This invite isn't for you!`);
             return res.redirect(`/login`);
-        } else if (friendRequest) {
-            const otherIdx = (localUserID.equals(friendRequest.IDs[0]) ? 1 : 0);
-            const otherFriendID = friendRequest.IDs[otherIdx];
-            User.findById(otherFriendID, (err, foundUser) => {
+        } else {
+            User.findById(friendRequest.source, (err, foundUser) => {
                 if (err) {
-                    console.error(`Error: Failed to find user`);
+                    flash(req, res, FlashType.ERROR, `Error: Failed to find user: ${err.message}`);
                     return res.redirect(`/users/${res.locals.user._id}/friends`);
                 }
 
-                if (res.locals.user.friends.addToSet(otherFriendID).length) {
+                if (res.locals.user.friends.addToSet(friendRequest.source).length) {
                     res.locals.user.save();
                 }
 
@@ -186,9 +178,6 @@ router.get('/confirm/:token', isLoggedIn, (req, res) => {
                 flash(req, res, FlashType.SUCCESS, `Successfully added friend!`);
                 return res.redirect(`/users/${res.locals.user._id}/friends`);
             });
-        } else {
-            flash(req, res, FlashType.ERROR, `Failed to find a user with those details or invite expired, please try again`);
-            return res.redirect('back');
         }
     });
 });
@@ -197,7 +186,7 @@ router.get('/confirm/:token', isLoggedIn, (req, res) => {
 router.delete('/decline/:token', isLoggedIn, (req, res) => {
     const token = req.params.token;
     Friends.findOne({ token, tokenType: TokenType.CONFIRM_FRIEND }, (err, friendRequest) => {
-        if (err || !friendRequest || friendRequest.IDs.indexOf(res.locals.user._id) == -1) {
+        if (err || !friendRequest || !friendRequest.request.equals(res.locals.user._id)) {
             flash(req, res, FlashType.ERROR, `Failed to find a user with those details, please try again`);
         } else {
             friendRequest.remove();
@@ -211,7 +200,7 @@ router.delete('/decline/:token', isLoggedIn, (req, res) => {
 router.get('/:friendID', isLoggedIn, (req, res) => {
     User.findById(req.params.friendID, (err, friend) => {
         if (err) {
-            console.error(`Error: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Error showing friend: ${err.message}`);
             res.redirect(`/users/${res.locals.user._id}/friends`);
         } else {
             // grab the slice of ratings associated with this user for the page being displayed
@@ -220,7 +209,7 @@ router.get('/:friendID', isLoggedIn, (req, res) => {
             const start = page * pageSize;
             Rating.find({user: req.params.friendID}).sort({ createdAt: -1 }).skip(start).limit(pageSize).exec((err, ratingObjs) => {
                 if (err) {
-                    console.error(`Error: ${err.message}`);
+                    flash(req, res, FlashType.ERROR, `Error getting ratings for friend: ${err.message}`);
                     return res.redirect(`/users/${res.locals.user._id}/friends`);
                 }
 
@@ -242,7 +231,7 @@ router.get('/:friendID', isLoggedIn, (req, res) => {
                 };
                 MenuItem.find(ratingQuery).exec((err, menuItems) => {
                     if (err) {
-                        console.error(`Error: ${err.message}`);
+                        flash(req, res, FlashType.ERROR, `Error getting menu items for friend: ${err.message}`);
                         return res.redirect(`/users/${res.locals.user._id}/friends`);
                     }
 
@@ -267,7 +256,7 @@ router.get('/:friendID', isLoggedIn, (req, res) => {
                     };
                     Restaurant.find({"$or": [ratingQuery, menuItemsQuery]}).exec((err, restaurants) => {
                         if (err) {
-                            console.error(`Error: ${err.message}`);
+                            flash(req, res, FlashType.ERROR, `Error getting restaurants for friend: ${err.message}`);
                             return res.redirect(`/users/${res.locals.user._id}/friends`);
                         }
 
@@ -292,7 +281,7 @@ router.get('/:friendID', isLoggedIn, (req, res) => {
                         // used to determine what the last page is
                         Rating.find({user: req.params.friendID}).count((err, count) => {
                             if (err) {
-                                console.error(`Error: ${err.message}`);
+                                flash(req, res, FlashType.ERROR, `Error getting rating count for friend: ${err.message}`);
                                 return res.redirect(`/users/${res.locals.user._id}/friends`);
                             }
 

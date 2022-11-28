@@ -67,9 +67,10 @@ seedData();
 // this will inject the signed in user to all pages
 // so we can reference it on any page
 app.use((req, res, next) => {
-    res.locals.error = req.flash('error');
-    res.locals.warning = req.flash('warning');
-    res.locals.success = req.flash('success');
+    res.locals.errorMsgs = req.flash('error');
+    res.locals.warningMsgs = req.flash('warning');
+    res.locals.successMsgs = req.flash('success');
+    res.locals.infoMsgs = req.flash('info');
     res.locals.ratingInfo = [
         {
             img: "/img/vomit",

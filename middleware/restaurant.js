@@ -9,7 +9,6 @@ module.exports = {
     cacheRestaurant: (req, res, next) => {
         Restaurant.findById(req.params.restaurantID, (err, restaurant) => {
             if (err) {
-                console.error(`Error: ${err.message}`);
                 flash(req, res, FlashType.ERROR, `Restaurant not found: ${err.message}`);
                 return res.redirect(`back`);
             }

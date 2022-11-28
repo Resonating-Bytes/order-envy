@@ -1,18 +1,23 @@
-<% if ((error && error.length) || (warning && warning.length) || (success && success.length)) { %>
+<% if ((errorMsgs && errorMsgs.length) || (warningMsgs && warningMsgs.length) || (successMsgs && successMsgs.length) || (infoMsgs && infoMsgs.length)) { %>
     <div class="container-fluid content">
-        <% if (error) { %>
-            <% error.forEach((msg) => { %>
+        <% if (errorMsgs) { %>
+            <% errorMsgs.forEach((msg) => { %>
                 <div class="alert alert-danger" role="alert"><%- msg %></div>
             <% }); %>
         <% } %>
-        <% if (warning) { %>
-            <% warning.forEach((msg) => { %>
+        <% if (warningMsgs) { %>
+            <% warningMsgs.forEach((msg) => { %>
                 <div class="alert alert-warning" role="alert"><%- msg %></div>
             <% }); %>
         <% } %>
-        <% if (success) { %>
-            <% success.forEach((msg) => { %>
+        <% if (successMsgs) { %>
+            <% successMsgs.forEach((msg) => { %>
                 <div class="alert alert-success" role="alert"><%- msg %></div>
+            <% }); %>
+        <% } %>
+        <% if (infoMsgs) { %>
+            <% infoMsgs.forEach((msg) => { %>
+                <div class="alert alert-info" role="alert"><%- msg %></div>
             <% }); %>
         <% } %>
     </div>

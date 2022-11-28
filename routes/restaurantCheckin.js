@@ -11,7 +11,6 @@ const { flash, FlashType } = require('../utils/misc');
 router.get('/checkin', isLoggedIn, cacheRestaurant, (req, res) => {
     Restaurant.findById(req.params.restaurantID).populate('menuItems').exec((err, restaurant) => {
         if (err) {
-            console.error(`Error: ${err.message}`);
             flash(req, res, FlashType.ERROR, `Restaurant not found: ${err.message}`);
             return res.redirect(`back`);
         } else {
@@ -29,7 +28,6 @@ function createRating(restaurant, menuItem, rating, comment, user) {
     
     Rating.create(newRating, (err, createdRating) => {
         if (err) {
-            console.error(`Error: ${err.message}`);
             flash(req, res, FlashType.ERROR, `Error creating rating: ${err.message}`);
         } else {
             if (menuItem) {

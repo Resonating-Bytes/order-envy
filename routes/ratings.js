@@ -41,7 +41,6 @@ router.post('/', isLoggedIn, cacheRestaurant, cacheMenuItem, (req, res) => {
     Rating.create(newRating, (err, createdRating) => {
         const { restaurant, menuItem } = res.locals;
         if (err) {
-            console.error(`Error: ${err.message}`);
             flash(req, res, FlashType.ERROR, `Error creating rating: ${err.message}`);
         } else {
             if (menuItem) {
@@ -55,7 +54,6 @@ router.post('/', isLoggedIn, cacheRestaurant, cacheMenuItem, (req, res) => {
                 return res.redirect('back');
             }
 
-            console.log('Created: ' + createdRating);
             flash(req, res, FlashType.SUCCESS, `Successfully created rating!`);
             const route = _buildRedirectRoute(restaurant);
             return res.redirect(route);
@@ -107,7 +105,6 @@ router.delete('/:ratingID', userOwnsRating, cacheRestaurant, cacheMenuItem, (req
     if (ratingData) {
         ratingData.remove((err) => {
             if (err) {
-                console.error(`Error: ${err.message}`);
                 flash(req, res, FlashType.ERROR, `Failed to remove rating: ${err.message}`);
             } else {
                 flash(req, res, FlashType.SUCCESS, `Rating deleted`);
