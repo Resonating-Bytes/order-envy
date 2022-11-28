@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router({mergeParams: true});
 
 const isLoggedIn = require('../middleware/isLoggedIn');
-
-const User = require('../models/user');
+const { flash, FlashType } = require('../utils/misc');
 
 // 'index' route
 // no reason to view all users on their own, redirect to home page
@@ -18,7 +17,7 @@ router.get('/new', (req, res) => {
 
 // 'create' route
 router.post('/', (req, res) => {
-    req.flash(`error`, `Error, use /register post route instead`);
+    flash(req, res, FlashType.ERROR, `Error, use /register post route instead`);
     return res.redirect('back');
 });
 
@@ -49,14 +48,14 @@ router.put('/:userID', isLoggedIn, (req, res) => {
         delete user.password; // don't leave this laying around for security
         (req.body.user.password ? user.changePassword(req.body.oldPassword, req.body.user.password) : Promise.resolve()).then(() => {
             user.save();
-            req.flash(`success`, `Updated user info`);
+            flash(req, res, FlashType.SUCCESS, `Updated user info`);
             return res.redirect(`/`);
         }).catch(err => {
-            req.flash(`error`, `Failed to save user info, please check all fields and try again`);
+            flash(req, res, FlashType.ERROR, `Failed to save user info, please check all fields and try again`);
             return res.redirect('back');
         });
     } else {
-        req.flash(`error`, `Failed to update user info`);
+        flash(req, res, FlashType.ERROR, `Failed to update user info`);
         return res.redirect('back');
     }
 });
@@ -68,13 +67,14 @@ router.delete('/:userID', isLoggedIn, (req, res) => {
             req.user.remove((err) => {
                 if (err) {
                     console.error(`Error: ${err.message}`);
-                    req.flash(`error`, `Failed to remove user: ${err.message}`);
+                    flash(req, res, FlashType.ERROR, `Failed to remove user: ${err.message}`);
                 } else {
-                    req.flash(`success`, `User deleted`);
+                    flash(req, res, FlashType.SUCCESS, `User deleted`);
                 }
+                return res.redirect(`/`);
             });
         } else {
-            res.redirect(`back`);
+            return res.redirect(`back`);
         }
     }
 });

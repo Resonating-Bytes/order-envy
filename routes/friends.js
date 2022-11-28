@@ -8,7 +8,7 @@ const MenuItem = require('../models/menuItem');
 const Rating = require('../models/rating');
 const Restaurant = require('../models/restaurant');
 const User = require('../models/user');
-const { getRatingInfo, generateToken, TokenType } = require('../utils/misc');
+const { flash, FlashType, getRatingInfo, generateToken, TokenType } = require('../utils/misc');
 
 // 'index' route
 router.get('/', isLoggedIn, (req, res) => {
@@ -45,7 +45,7 @@ router.post('/', isLoggedIn, (req, res) => {
     User.find(clean(req.body.friend), (err, foundUsers) => {
         if (err) {
             console.error(`Error: ${err.message}`);
-            req.flash(`error`, `Error adding friend: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Error adding friend: ${err.message}`);
             return res.redirect('back');
         } else if (foundUsers.length === 1) {
             const foundUser = foundUsers[0];
@@ -80,7 +80,7 @@ router.post('/', isLoggedIn, (req, res) => {
                 Friends.create(friends, (err, newFriend) => {
                     if (err) {
                         console.error(`Error: ${err.message}`);
-                        req.flash(`error`, `Error adding friend: ${err.message}`);
+                        flash(req, res, FlashType.ERROR, `Error adding friend: ${err.message}`);
                         return res.redirect('back');
                     }
 
@@ -106,19 +106,19 @@ router.post('/', isLoggedIn, (req, res) => {
                 
                     transporter.sendMail(mailOptions, (error, info) => {
                         if (error) {
-                            req.flash(`error`, `Error: Failed to invite friend: ` + error);
+                            flash(req, res, FlashType.ERROR, `Error: Failed to invite friend: ` + error);
                         } else {
-                            req.flash(`success`, `Request sent!`);
+                            flash(req, res, FlashType.SUCCESS, `Request sent!`);
                         }
                         return res.redirect('back');
                     });
                 });
             });
         } else if (foundUsers.length === 0) {
-            req.flash(`error`, `Failed to find a user with those details, please try again`);
+            flash(req, res, FlashType.ERROR, `Failed to find a user with those details, please try again`);
             return res.redirect('back');
         } else {
-            req.flash(`error`, `Found more than one user with those details, please be more specific`);
+            flash(req, res, FlashType.ERROR, `Found more than one user with those details, please be more specific`);
             return res.redirect(`/users/${res.locals.user._id}`);
         }
     });
@@ -131,10 +131,10 @@ router.get('/confirm/:token', isLoggedIn, (req, res) => {
         const localUserID = res.locals.user._id;
         if (err) {
             console.error(`Error: ${err.message}`);
-            req.flash(`error`, `Error confirming friend: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Error confirming friend: ${err.message}`);
             return res.redirect(`/login`);
         } else if (!(localUserID.equals(friendRequest.IDs[0]) || localUserID.equals(friendRequest.IDs[1]))) {
-            req.flash(`error`, `This invite isn't for you!`);
+            flash(req, res, FlashType.ERROR, `This invite isn't for you!`);
             return res.redirect(`/login`);
         } else if (friendRequest) {
             const otherIdx = (localUserID.equals(friendRequest.IDs[0]) ? 1 : 0);
@@ -178,16 +178,16 @@ router.get('/confirm/:token', isLoggedIn, (req, res) => {
             
                 transporter.sendMail(mailOptions, (error, info) => {
                     if (error) {
-                        req.flash(`error`, `Error: Failed to confirm friend: ` + error);
+                        flash(req, res, FlashType.ERROR, `Error: Failed to confirm friend: ` + error);
                         return res.redirect(`/users/${res.locals.user._id}/friends`);
                     }
                 });
 
-                req.flash(`success`, `Successfully added friend!`);
+                flash(req, res, FlashType.SUCCESS, `Successfully added friend!`);
                 return res.redirect(`/users/${res.locals.user._id}/friends`);
             });
         } else {
-            req.flash(`error`, `Failed to find a user with those details or invite expired, please try again`);
+            flash(req, res, FlashType.ERROR, `Failed to find a user with those details or invite expired, please try again`);
             return res.redirect('back');
         }
     });
@@ -197,13 +197,13 @@ router.get('/confirm/:token', isLoggedIn, (req, res) => {
 router.delete('/decline/:token', isLoggedIn, (req, res) => {
     const token = req.params.token;
     Friends.findOne({ token, tokenType: TokenType.CONFIRM_FRIEND }, (err, friendRequest) => {
-        res.redirect('back');
         if (err || !friendRequest || friendRequest.IDs.indexOf(res.locals.user._id) == -1) {
-            req.flash(`error`, `Failed to find a user with those details, please try again`);
+            flash(req, res, FlashType.ERROR, `Failed to find a user with those details, please try again`);
         } else {
             friendRequest.remove();
-            req.flash(`success`, `Request removed`);
+            flash(req, res, FlashType.SUCCESS, `Request removed`);
         }
+        res.redirect('back');
     });
 });
 
@@ -326,7 +326,7 @@ router.put('/:friendID', isLoggedIn, (req, res) => {
 router.delete('/:friendID', isLoggedIn, (req, res) => {
     User.findById(req.params.friendID, (err, foundUser) => {
         if (err || !foundUser) {
-            req.flash(`error`, `Failed to find a user with those details, please try again`);
+            flash(req, res, FlashType.ERROR, `Failed to find a user with those details, please try again`);
         } else {
             // remove the specified ID from the current user friend list
             const { user } = res.locals;
@@ -336,10 +336,11 @@ router.delete('/:friendID', isLoggedIn, (req, res) => {
             // now remove this user from the friend
             foundUser.friends = foundUser.friends.filter((friend) => { return !friend._id.equals(user._id); });
             foundUser.save();
+
+            flash(req, res, FlashType.SUCCESS, `Friend removed!`);
         }
 
         res.redirect('back');
-        req.flash(`success`, `Friend removed!`);
     });
 });
 

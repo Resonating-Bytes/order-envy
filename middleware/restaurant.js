@@ -1,5 +1,6 @@
 const Restaurant = require('../models/restaurant');
 const isLoggedIn = require('./isLoggedIn');
+const { flash, FlashType } = require('../utils/misc');
 
 module.exports = {
     /**
@@ -9,7 +10,7 @@ module.exports = {
         Restaurant.findById(req.params.restaurantID, (err, restaurant) => {
             if (err) {
                 console.error(`Error: ${err.message}`);
-                req.flash(`error`, `Restaurant not found: ${err.message}`);
+                flash(req, res, FlashType.ERROR, `Restaurant not found: ${err.message}`);
                 return res.redirect(`back`);
             }
 
@@ -31,7 +32,7 @@ module.exports = {
                     return next();
                 }
 
-                req.flash(`error`, `You don't have permission for that`);
+                flash(req, res, FlashType.ERROR, `You don't have permission for that`);
 
                 // clear out the restaurant so it isn't used by accident
                 delete res.locals.restaurant;

@@ -4,7 +4,7 @@ const expressSession = require('express-session');
 require('dotenv').config();
 
 const bodyParser = require('body-parser');
-const flash = require('connect-flash');
+const Flash = require('connect-flash');
 const mongoose = require('mongoose');
 const methodOverride = require('method-override');
 const passport = require('passport');
@@ -27,12 +27,14 @@ const restaurantRoutes = require('./routes/restaurants');
 const restaurantCheckinRoutes = require('./routes/restaurantCheckin');
 const userRoutes = require('./routes/users');
 
+const { flash, FlashType } = require('./utils/misc');
+
 // switching stack
 
 app.use(express.static(__dirname + "/public"));
 app.use(express.static("./lib"));
 app.use(methodOverride('_method'));
-app.use(flash()); // this needs to come before passport configuration
+app.use(Flash()); // this needs to come before passport configuration
 app.set('view engine', 'ejs');
 app.use(cookieParser());
 
@@ -99,7 +101,7 @@ app.use((req, res, next) => {
     // pull the user from the DB so we can populate fields properly
     User.findById((req.user || {})._id).populate('friends').exec((err, user) => {
         if (err) {
-            req.flash(`error`, `Failed to populate user: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Failed to populate user: ${err.message}`);
         } else {
             res.locals.user = user;
         }

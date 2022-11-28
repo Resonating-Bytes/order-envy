@@ -3,13 +3,11 @@ const router = express.Router({mergeParams: true});
 
 const isLoggedIn = require('../middleware/isLoggedIn');
 const { canEditRestaurant } = require('../middleware/restaurant');
-const { filterUserOwned, getCookies, getRatingInfo } = require('../utils/misc');
-const Friends = require('../models/friends');
+const { filterUserOwned, flash, FlashType, getCookies, getRatingInfo } = require('../utils/misc');
 const List = require('../models/list');
 const Recommendation = require('../models/recommendation');
 const Note = require('../models/note');
 const Restaurant = require('../models/restaurant');
-const friends = require('../models/friends');
 
 // 'index' route
 router.get('/', (req, res) => {
@@ -64,18 +62,11 @@ router.get('/', (req, res) => {
                         <option value="all">All</option>
                     </select>`;
 
-                    const userId = (res.locals.user || {})._id;
-                    Friends.find({IDs: userId}, (err, friendRequests) => {
-                        if (!err && friendRequests && friendRequests.length) {
-                            req.flash(`success`, `You have pending friend requests <a href="/users/${req.user._id}/friends">here</a>`);
-                        }
-
-                        res.render('restaurants/index', {
-                            restaurants: filterByDist(restaurants),
-                            recommendations,
-                            onload: `"loadFilterByDistance('${filterDistStr}'); findMe('cookie');"`,
-                            headerContent,
-                        });
+                    res.render('restaurants/index', {
+                        restaurants: filterByDist(restaurants),
+                        recommendations,
+                        onload: `"loadFilterByDistance('${filterDistStr}'); findMe('cookie');"`,
+                        headerContent,
                     });
                 }
             });
@@ -105,11 +96,12 @@ router.post('/', isLoggedIn, (req, res) => {
     Restaurant.create(newRestaurant, (err, createdRestaurant) => {
         if (err) {
             console.error(`Error: ${err.message}`);
-            req.flash(`error`, `Error creating restaurant: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Error creating restaurant: ${err.message}`);
+            return res.redirect(`back`);
         } else {
             console.log('Created: ' + createdRestaurant);
-            req.flash(`success`, `Successfully created restaurant!`);
-            res.redirect(`/restaurants/${createdRestaurant._id}`);
+            flash(req, res, FlashType.SUCCESS, `Successfully created restaurant!`);
+            return res.redirect(`/restaurants/${createdRestaurant._id}`);
         }
     });
 });
@@ -202,12 +194,12 @@ router.delete('/:restaurantID', canEditRestaurant, (req, res) => {
         restaurant.remove((err) => {
             if (err) {
                 console.error(`Error: ${err.message}`);
-                req.flash(`error`, `Failed to remove restaurant: ${err.message}`);
+                flash(req, res, FlashType.ERROR, `Failed to remove restaurant: ${err.message}`);
             } else {
-                req.flash(`success`, `Restaurant deleted`);
+                flash(req, res, FlashType.SUCCESS, `Restaurant deleted`);
             }
     
-            res.redirect('/restaurants');
+            return res.redirect('/restaurants');
         });
     }
 });

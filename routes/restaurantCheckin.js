@@ -6,15 +6,16 @@ const { cacheRestaurant } = require('../middleware/restaurant');
 const MenuItem = require('../models/menuItem');
 const Rating = require('../models/rating');
 const Restaurant = require('../models/restaurant');
+const { flash, FlashType } = require('../utils/misc');
 
 router.get('/checkin', isLoggedIn, cacheRestaurant, (req, res) => {
     Restaurant.findById(req.params.restaurantID).populate('menuItems').exec((err, restaurant) => {
         if (err) {
             console.error(`Error: ${err.message}`);
-            req.flash(`error`, `Restaurant not found: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Restaurant not found: ${err.message}`);
             return res.redirect(`back`);
         } else {
-            res.render('restaurants/checkin', { restaurant });
+            return res.render('restaurants/checkin', { restaurant });
         }
     });
 });
@@ -29,7 +30,7 @@ function createRating(restaurant, menuItem, rating, comment, user) {
     Rating.create(newRating, (err, createdRating) => {
         if (err) {
             console.error(`Error: ${err.message}`);
-            req.flash(`error`, `Error creating rating: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Error creating rating: ${err.message}`);
         } else {
             if (menuItem) {
                 menuItem.ratings.push(createdRating);
@@ -38,7 +39,7 @@ function createRating(restaurant, menuItem, rating, comment, user) {
                 restaurant.ratings.push(createdRating);
                 restaurant.save();
             } else {
-                req.flash(`error`, `Unknown error creating rating`);
+                flash(req, res, FlashType.ERROR, `Unknown error creating rating`);
             }
         }
     });
@@ -61,7 +62,7 @@ router.post('/checkin', isLoggedIn, cacheRestaurant, (req, res) => {
         if (checked  && rating !== undefined && rating !== null) {
             MenuItem.findById(menuItemID, (err, menuItem) => {
                 if (err) {
-                    req.flash(`error`, `Failed to find menu item`);
+                    flash(req, res, FlashType.ERROR, `Failed to find menu item`);
                     return res.redirect('back');
                 } else {
                     createRating(res.locals.restaurant, menuItem, rating, comment, res.locals.user);
@@ -70,8 +71,8 @@ router.post('/checkin', isLoggedIn, cacheRestaurant, (req, res) => {
         }
     });
 
-    req.flash('success', 'Successfully checked in');
-    res.redirect(`/restaurants/${res.locals.restaurant._id}`);
+    flash(req, res, 'success', 'Successfully checked in');
+    return res.redirect(`/restaurants/${res.locals.restaurant._id}`);
 });
 
 module.exports = router;

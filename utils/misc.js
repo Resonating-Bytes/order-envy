@@ -2,6 +2,12 @@
  * Collection of random reusable utility functions
  */
 module.exports = {
+    FlashType: {
+        ERROR: 'error',
+        WARNING: 'warning',
+        SUCCESS: 'success',
+    },
+
     TokenType: {
         // define what token is being used for
         NEW_ACCOUNT: 0,
@@ -72,5 +78,18 @@ module.exports = {
         // swap out characters that mess with the address
         var id = buf.toString('base64').slice(0, -2).replaceAll(/=|\/|\?/g, '_');
         return id;
+    },
+
+    flash: (req, res, type, msg) => {
+        if (req) {
+            req.flash(type, msg);
+        }
+        if (res && res.locals) {
+            if (type in res.locals && typeof(res.locals[type]) == 'object') {
+                res.locals[type].push(msg);
+            } else {
+                res.locals[type] = [msg];
+            }
+        }
     },
 }

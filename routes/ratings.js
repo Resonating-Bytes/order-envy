@@ -5,7 +5,7 @@ const isLoggedIn = require('../middleware/isLoggedIn');
 const { cacheRestaurant } = require('../middleware/restaurant');
 const { cacheMenuItem } = require('../middleware/menuItem');
 const { userOwnsRating } = require('../middleware/rating');
-const { getRatingInfo } = require('../utils/misc');
+const { flash, FlashType, getRatingInfo } = require('../utils/misc');
 const Rating = require('../models/rating');
 
 // helper to build up route based on available pieces from request
@@ -42,7 +42,7 @@ router.post('/', isLoggedIn, cacheRestaurant, cacheMenuItem, (req, res) => {
         const { restaurant, menuItem } = res.locals;
         if (err) {
             console.error(`Error: ${err.message}`);
-            req.flash(`error`, `Error creating rating: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Error creating rating: ${err.message}`);
         } else {
             if (menuItem) {
                 menuItem.ratings.push(createdRating);
@@ -51,14 +51,14 @@ router.post('/', isLoggedIn, cacheRestaurant, cacheMenuItem, (req, res) => {
                 restaurant.ratings.push(createdRating);
                 restaurant.save();
             } else {
-                req.flash(`error`, `Unknown error creating rating`);
+                flash(req, res, FlashType.ERROR, `Unknown error creating rating`);
                 return res.redirect('back');
             }
 
             console.log('Created: ' + createdRating);
-            req.flash(`success`, `Successfully created rating!`);
+            flash(req, res, FlashType.SUCCESS, `Successfully created rating!`);
             const route = _buildRedirectRoute(restaurant);
-            res.redirect(route);
+            return res.redirect(route);
         }
     });
 });
@@ -79,8 +79,8 @@ router.get('/:ratingID/edit', userOwnsRating, cacheRestaurant, cacheMenuItem, (r
         const menuItemRoute = (menuItem ? `/menuItems/${menuItem._id}` : ``);
         res.render(`ratings/edit`, { menuItemRoute, restaurantRoute, ratingData });
     } else {
-        req.flash(`error`, `Unknown error editing rating`);
-        res.redirect(`/restaurants`);
+        flash(req, res, FlashType.ERROR, `Unknown error editing rating`);
+        return res.redirect(`/restaurants`);
     }
 });
 
@@ -95,8 +95,8 @@ router.put('/:ratingID', userOwnsRating, cacheRestaurant, cacheMenuItem, (req, r
         const route = _buildRedirectRoute(restaurant, menuItem);
         res.redirect(route + `/ratings/${ratingData._id}`);
     } else {
-        req.flash(`error`, `Unknown error editing rating`);
-        res.redirect(`/restaurants`);
+        flash(req, res, FlashType.ERROR, `Unknown error editing rating`);
+        return res.redirect(`/restaurants`);
     }
 });
 
@@ -108,17 +108,17 @@ router.delete('/:ratingID', userOwnsRating, cacheRestaurant, cacheMenuItem, (req
         ratingData.remove((err) => {
             if (err) {
                 console.error(`Error: ${err.message}`);
-                req.flash(`error`, `Failed to remove rating: ${err.message}`);
+                flash(req, res, FlashType.ERROR, `Failed to remove rating: ${err.message}`);
             } else {
-                req.flash(`success`, `Rating deleted`);
+                flash(req, res, FlashType.SUCCESS, `Rating deleted`);
             }
 
             const route = _buildRedirectRoute(restaurant, menuItem);
-            res.redirect(route);
+            return res.redirect(route);
         });
     } else {
-        req.flash(`error`, `Unknown error deleting rating`);
-        res.redirect(`/restaurants`);
+        flash(req, res, FlashType.ERROR, `Unknown error deleting rating`);
+        return res.redirect(`/restaurants`);
     }
 });
 

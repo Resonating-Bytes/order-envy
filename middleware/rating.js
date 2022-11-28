@@ -1,6 +1,6 @@
 const Rating = require('../models/rating');
 const isLoggedIn = require('./isLoggedIn');
-const { isOwner } = require('../utils/misc');
+const { flash, FlashType, isOwner } = require('../utils/misc');
 
 module.exports = {
     /**
@@ -10,7 +10,7 @@ module.exports = {
         Rating.findById(req.params.ratingID, (err, ratingData) => {
             if (err) {
                 console.error(`Error: ${err.message}`);
-                req.flash(`error`, `Rating not found: ${err.message}`);
+                flash(req, res, FlashType.ERROR, `Rating not found: ${err.message}`);
                 return res.redirect(`back`);
             }
 
@@ -33,7 +33,7 @@ module.exports = {
                     return next();
                 }
 
-                req.flash(`error`, `You don't have permission for that`);
+                flash(req, res, FlashType.ERROR, `You don't have permission for that`);
 
                 // clear out the rating so it isn't used by accident
                 delete res.locals.ratingData;

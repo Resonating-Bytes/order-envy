@@ -1,13 +1,19 @@
 <% if ((error && error.length) || (warning && warning.length) || (success && success.length)) { %>
     <div class="container-fluid content">
-        <% if (error && error.length) { %>
-            <div class="alert alert-danger" role="alert"><%= error %></div>
+        <% if (error) { %>
+            <% error.forEach((msg) => { %>
+                <div class="alert alert-danger" role="alert"><%- msg %></div>
+            <% }); %>
         <% } %>
-        <% if (warning && warning.length) { %>
-            <div class="alert alert-warning" role="alert"><%= warning %></div>
+        <% if (warning) { %>
+            <% warning.forEach((msg) => { %>
+                <div class="alert alert-warning" role="alert"><%- msg %></div>
+            <% }); %>
         <% } %>
-        <% if (success && success.length) { %>
-            <div class="alert alert-success" role="alert"><%= success %></div>
+        <% if (success) { %>
+            <% success.forEach((msg) => { %>
+                <div class="alert alert-success" role="alert"><%- msg %></div>
+            <% }); %>
         <% } %>
     </div>
 <% } %>

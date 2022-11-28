@@ -4,7 +4,7 @@ const router = express.Router({mergeParams: true});
 const isLoggedIn = require('../middleware/isLoggedIn');
 const { cacheRestaurant } = require('../middleware/restaurant');
 const { canEditMenuItem } = require('../middleware/menuItem');
-const { filterUserOwned, getRatingInfo } = require('../utils/misc');
+const { filterUserOwned, flash, FlashType, getRatingInfo } = require('../utils/misc');
 
 const MenuItem = require('../models/menuItem');
 const Note = require('../models/note');
@@ -31,11 +31,11 @@ router.post('/', isLoggedIn, cacheRestaurant, (req, res) => {
     MenuItem.create(menuItem, (err, createdMenuItem) => {
         if (err) {
             console.error(`Error: ${err.message}`);
-            req.flash(`error`, `Error creating menuItem: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Error creating menuItem: ${err.message}`);
             return res.redirect('back');
         } else {
             console.log('Created: ' + createdMenuItem);
-            req.flash(`success`, `Successfully created menu item!`);
+            flash(req, res, FlashType.SUCCESS, `Successfully created menu item!`);
             const { restaurant } = res.locals;
             if (restaurant) {
                 restaurant.menuItems.push(createdMenuItem);
@@ -44,7 +44,7 @@ router.post('/', isLoggedIn, cacheRestaurant, (req, res) => {
             }
         }
 
-        res.redirect('/restaurants');
+        return res.redirect('/restaurants');
     });
 });
 
@@ -103,16 +103,16 @@ router.delete('/:menuItemID', canEditMenuItem, cacheRestaurant, (req, res) => {
         menuItem.remove((err) => {
             if (err) {
                 console.error(`Error: ${err.message}`);
-                req.flash(`error`, `Failed to remove menuItem: ${err.message}`);
+                flash(req, res, FlashType.ERROR, `Failed to remove menuItem: ${err.message}`);
             } else {
-                req.flash(`success`, `Menu item deleted`);
+                flash(req, res, FlashType.SUCCESS, `Menu item deleted`);
             }
 
             const { restaurant } = res.locals;
             if (restaurant) {
-                res.redirect(`/restaurants/${restaurant._id}`);
+                return res.redirect(`/restaurants/${restaurant._id}`);
             } else {
-                res.redirect(`/restaurants`);
+                return res.redirect(`/restaurants`);
             }
         });
     }

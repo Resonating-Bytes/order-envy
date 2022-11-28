@@ -4,6 +4,7 @@ const router = express.Router({mergeParams: true});
 const isLoggedIn = require('../middleware/isLoggedIn');
 const { cacheRestaurant } = require('../middleware/restaurant');
 const { cacheMenuItem } = require('../middleware/menuItem');
+const { flash, FlashType } = require('../utils/misc');
 const Note = require('../models/note');
 
 // 'index' route
@@ -32,7 +33,7 @@ router.post('/', isLoggedIn, cacheRestaurant, cacheMenuItem, (req, res) => {
     } else if (restaurant) {
         newNote.aboutModel = 'Restaurant';
     } else {
-        req.flash(`error`, `Failed to find valid thing to attach the note to`);
+        flash(req, res, FlashType.ERROR, `Failed to find valid thing to attach the note to`);
         return res.redirect('/restaurants');
     }
 
@@ -42,18 +43,18 @@ router.post('/', isLoggedIn, cacheRestaurant, cacheMenuItem, (req, res) => {
             Object.assign(foundNote, newNote);
             foundNote.save();
             console.log('Updated: ' + foundNote);
-            req.flash(`success`, `Successfully updated note!`);
-            res.redirect('back');
+            flash(req, res, FlashType.SUCCESS, `Successfully updated note!`);
+            return res.redirect('back');
         } else {
             Note.create(newNote, (err, createdNote) => {
                 if (err) {
                     console.error(`Error: ${err.message}`);
-                    req.flash(`error`, `Error creating rating: ${err.message}`);
+                    flash(req, res, FlashType.ERROR, `Error creating rating: ${err.message}`);
                 } else {
                     console.log('Created: ' + createdNote);
-                    req.flash(`success`, `Successfully saved note!`);
+                    flash(req, res, FlashType.SUCCESS, `Successfully saved note!`);
                 }
-                res.redirect('back');
+                return res.redirect('back');
             });
         }
     });

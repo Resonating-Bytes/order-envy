@@ -3,6 +3,7 @@ const router = express.Router({mergeParams: true});
 
 const isLoggedIn = require('../middleware/isLoggedIn');
 const { userOwnsList } = require('../middleware/list');
+const { flash, FlashType } = require('../utils/misc');
 const List = require('../models/list');
 const User = require('../models/user');
 
@@ -11,7 +12,7 @@ router.get('/', isLoggedIn, (req, res) => {
     List.find({users: res.locals.user}, (err, lists) => {
         if (err) {
             console.error(`Error: ${err.message}`);
-            req.flash(`error`, `Error rendering lists: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Error rendering lists: ${err.message}`);
             res.redirect('/');
         } else {
             res.render('lists/index', { lists });
@@ -33,10 +34,10 @@ router.post('/', isLoggedIn, (req, res) => {
     List.create(newList, (err, createdList) => {
         if (err) {
             console.error(`Error: ${err.message}`);
-            req.flash(`error`, `Error creating list: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Error creating list: ${err.message}`);
         } else {
             console.log('Created: ' + createdList);
-            req.flash(`success`, `Successfully created list!`);
+            flash(req, res, FlashType.SUCCESS, `Successfully created list!`);
         }
 
         // succeed or fail, send them to the same place
@@ -55,9 +56,10 @@ router.get('/:listID', isLoggedIn, (req, res) => {
     List.findById(req.params.listID).populate('restaurants').exec((err, foundList) => {
         if (err) {
             console.error(`Error: ${err.message}`);
-            req.flash(`error`, `Error creating list: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Error creating list: ${err.message}`);
+            return res.redirect('back');
         } else {
-            res.render('lists/show', { list: foundList });
+            return res.render('lists/show', { list: foundList });
         }
     });
 });
@@ -66,10 +68,10 @@ router.get('/:listID', isLoggedIn, (req, res) => {
 router.get('/:listID/edit', userOwnsList, (req, res) => {
     const { list } = res.locals;
     if (list) {
-        res.render(`lists/edit`, { list });
+        return res.render(`lists/edit`, { list });
     } else {
-        req.flash(`error`, `Unknown error editing list`);
-        res.redirect(`/lists`);
+        flash(req, res, FlashType.ERROR, `Unknown error editing list`);
+        return res.redirect(`/lists`);
     }
 });
 
@@ -81,10 +83,10 @@ router.put('/:listID', userOwnsList, (req, res) => {
         Object.assign(list, req.body.list);
         list.save();
     } else {
-        req.flash(`error`, `Unknown error editing list`);
+        flash(req, res, FlashType.ERROR, `Unknown error editing list`);
     }
 
-    res.redirect(`/lists/${req.params.listID}`);
+    return res.redirect(`/lists/${req.params.listID}`);
 });
 
 // 'delete' route
@@ -95,16 +97,16 @@ router.delete('/:listID', userOwnsList, (req, res) => {
         list.remove((err) => {
             if (err) {
                 console.error(`Error: ${err.message}`);
-                req.flash(`error`, `Failed to remove list: ${err.message}`);
+                flash(req, res, FlashType.ERROR, `Failed to remove list: ${err.message}`);
             } else {
-                req.flash(`success`, `List deleted`);
+                flash(req, res, FlashType.SUCCESS, `List deleted`);
             }
         });
     } else {
-        req.flash(`error`, `Unknown error deleting list`);
+        flash(req, res, FlashType.ERROR, `Unknown error deleting list`);
     }
 
-    res.redirect(`/lists`);
+    return res.redirect(`/lists`);
 });
 
 // 'addOwner'
@@ -112,11 +114,11 @@ router.get('/:listID/addOwner/:userID', userOwnsList, (req, res) => {
     const { list } = res.locals;
     if (list && list.users.addToSet(req.params.userID).length) {
         list.save();
-        req.flash(`success`, `Added as owner of the list!`);
+        flash(req, res, FlashType.SUCCESS, `Added as owner of the list!`);
     }
 
     // always send them back where they came from
-    res.redirect('back');
+    return res.redirect('back');
 });
 
 module.exports = router;

@@ -1,6 +1,6 @@
 const MenuItem = require('../models/menuItem');
 const isLoggedIn = require('./isLoggedIn');
-const { isOwner } = require('../utils/misc');
+const { flash, FlashType } = require('../utils/misc');
 
 module.exports = {
     /**
@@ -10,7 +10,7 @@ module.exports = {
         MenuItem.findById(req.params.menuItemID, (err, menuItem) => {
             if (err) {
                 console.error(`Error: ${err.message}`);
-                req.flash(`error`, ` not found: ${err.message}`);
+                flash(req, res, FlashType.ERROR, ` not found: ${err.message}`);
                 return res.redirect(`back`);
             }
 

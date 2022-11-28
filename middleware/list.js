@@ -1,6 +1,6 @@
 const List = require('../models/list');
 const isLoggedIn = require('./isLoggedIn');
-const { isOwner } = require('../utils/misc');
+const { flash, FlashType, isOwner } = require('../utils/misc');
 
 module.exports = {
     /**
@@ -10,7 +10,7 @@ module.exports = {
         List.findById(req.params.listID, (err, list) => {
             if (err) {
                 console.error(`Error: ${err.message}`);
-                req.flash(`error`, `List not found: ${err.message}`);
+                flash(req, res, FlashType.ERROR, `List not found: ${err.message}`);
                 return res.redirect(`back`);
             }
 
@@ -33,7 +33,7 @@ module.exports = {
                     return next();
                 }
 
-                req.flash(`error`, `You don't have permission for that`);
+                flash(req, res, FlashType.ERROR, `You don't have permission for that`);
 
                 // clear out the list so it isn't used by accident
                 delete res.locals.list;

@@ -3,10 +3,11 @@ const router = express.Router({mergeParams: true});
 const passport = require('passport');
 const nodemailer = require('nodemailer');
 
+const Friends = require('../models/friends');
 const Recommendation = require('../models/recommendation');
 const User = require('../models/user');
 
-const {generateToken, TokenType} = require('../utils/misc');
+const { flash, FlashType, generateToken, TokenType } = require('../utils/misc');
 
 // index route
 router.get('/', (req, res) => {
@@ -18,7 +19,7 @@ router.get('/', (req, res) => {
     Recommendation.find({for: (req.user || {})._id}).populate('restaurant').populate('menuItem').sort('-updatedAt').exec((err, recommendations) => {
         if (err) {
             console.error(err);
-            req.flash(`error`, `Failed to grab recommendations: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Failed to grab recommendations: ${err.message}`);
         }
         const numRecs = req.query.numRecs || 5;
         res.render('home', { recommendations: recommendations.slice(0, numRecs) });
@@ -34,7 +35,7 @@ router.get('/register', (req, res) => {
 router.post('/register', (req, res) => {
     // sanity check, also done as part of form validation on the page
     if (req.body.password != req.body.confirmPassword) {
-        req.flash(`error`, `Error: Passwords need to match`);
+        flash(req, res, FlashType.ERROR, `Error: Passwords need to match`);
         return res.redirect('/register');
     }
 
@@ -54,7 +55,7 @@ router.post('/register', (req, res) => {
     User.register(new User(user), req.body.password, (err, newUser) => {
         if (err) {
             console.error(err);
-            req.flash(`error`, `Failed to register user: ${err.message}`);
+            flash(req, res, FlashType.ERROR, `Failed to register user: ${err.message}`);
             return res.redirect('/register');
         }
 
@@ -84,7 +85,7 @@ router.post('/register', (req, res) => {
                 if (error) {
                     // remove the user entry since it wasn't set up properly
                     req.user.remove();
-                    req.flash(`error`, `Error: Failed to send email: ` + error);
+                    flash(req, res, FlashType.ERROR, `Error: Failed to send email: ` + error);
                     return res.redirect('/register');
                 } else {
                     req.logout({keepSessionInfo: false}, (err) => {
@@ -107,7 +108,7 @@ router.get('/register/:token', (req, res) => {
             if (user) {
                 user.remove();
             }
-            req.flash(`error`, `Error: Failed to validate account, please try again`);
+            flash(req, res, FlashType.ERROR, `Error: Failed to validate account, please try again`);
             return res.redirect('/register');
         } else {
             // clear the token so the user isn't deleted on accident later
@@ -115,7 +116,7 @@ router.get('/register/:token', (req, res) => {
             user.tokenExpire = undefined;
             user.tokenType = undefined;
             user.save();
-            req.flash(`success`, `Account validated!`);
+            flash(req, res, FlashType.SUCCESS, `Account validated!`);
             return res.redirect('/login');
         }
     });
@@ -135,19 +136,26 @@ router.post('/login', passport.authenticate('local', {
     if (req.user.tokenType == TokenType.NEW_ACCOUNT) {
         if (req.user.tokenExpire.getTime() < Date.now()) {
             req.user.remove();
-            req.flash(`error`, `Error: Account registration token expired, please register again`);
+            flash(req, res, FlashType.ERROR, `Error: Account registration token expired, please register again`);
             return res.redirect('/register');
         } else {
             req.logout({keepSessionInfo: false}, (err) => {
                 if (err) {
                     console.log(`Error while logging out: ${err}`);
                 }
-                req.flash(`error`, `Error: Account must be validated first, please check your email`);
+                flash(req, res, FlashType.ERROR, `Error: Account must be validated first, please check your email`);
                 return res.redirect(`back`);
             });
         }
     } else {
-        return res.redirect('/restaurants');
+        const userId = req.user._id;
+        Friends.find({IDs: userId}, (err, friendRequests) => {
+            if (!err && friendRequests && friendRequests.length) {
+                flash(req, res, FlashType.SUCCESS, `You have pending friend requests <a href="/users/${req.user._id}/friends" class="btn btn-outline btn-outline-primary">here</a>`);
+            }
+
+            return res.redirect('/restaurants');
+        });
     }
 });
 
@@ -160,7 +168,7 @@ router.post('/forgotPassword', (req, res) => {
 
     User.findByUsername(email, (err, user) => {
         if (err) {
-            req.flash(`error`, `Error: No user found with that email`);
+            flash(req, res, FlashType.ERROR, `Error: No user found with that email`);
             return res.redirect('/forgotPassword');
         }
 
@@ -174,7 +182,7 @@ router.post('/forgotPassword', (req, res) => {
             { token, tokenExpire, tokenType: TokenType.FORGOT_PASSWORD },
             (err, result) => {
                 if (err || result.modifiedCount != 1) {
-                    req.flash(`error`, `Error: Failed to generate reset token, please try again`);
+                    flash(req, res, FlashType.ERROR, `Error: Failed to generate reset token, please try again`);
                     return res.redirect('/forgotPassword');
                 } else {
                     const transporter = nodemailer.createTransport({
@@ -197,10 +205,10 @@ router.post('/forgotPassword', (req, res) => {
 
                     transporter.sendMail(mailOptions, (error, info) => {
                         if (error) {
-                            req.flash(`error`, `Error: Failed to send email: ` + error);
+                            flash(req, res, FlashType.ERROR, `Error: Failed to send email: ` + error);
                             return res.redirect('/forgotPassword');
                         } else {
-                            req.flash(`success`, `Success!`);
+                            flash(req, res, FlashType.SUCCESS, `Success!`);
                             return res.render('resetSent', {email: email});
                         }
                     });
@@ -214,7 +222,7 @@ router.get('/resetPassword/:token', (req, res) => {
     User.findOne({ token: token, tokenType: TokenType.FORGOT_PASSWORD }, (err, user) => {
         const tokenExpire = (user && user.tokenExpire ? user.tokenExpire.getTime() : 0);
         if (err || tokenExpire < Date.now()) {
-            req.flash(`error`, `Error: Reset token expired, please try again`);
+            flash(req, res, FlashType.ERROR, `Error: Reset token expired, please try again`);
             return res.redirect('/forgotPassword');
         } else {
             return res.render('resetPassword', {token: token, email: user.username});
@@ -227,7 +235,7 @@ router.post('/resetPassword', (req, res) => {
 
     // sanity check, also done as part of form validation on the page
     if (req.body.newPassword != req.body.confirmPassword) {
-        req.flash(`error`, `Error: Passwords need to match`);
+        flash(req, res, FlashType.ERROR, `Error: Passwords need to match`);
         return res.redirect('/resetPassword/' + token);
     }
 
@@ -235,13 +243,13 @@ router.post('/resetPassword', (req, res) => {
     User.findOne({ token: token, tokenType: TokenType.FORGOT_PASSWORD }, (err, user) => {
         const tokenExpire = (user ? user.tokenExpire.getTime() : 0);
         if (err || tokenExpire < Date.now()) {
-            req.flash(`error`, `Error: No user found or token expired`);
+            flash(req, res, FlashType.ERROR, `Error: No user found or token expired`);
             return res.redirect('/forgotPassword');
         }
 
         user.setPassword(req.body.newPassword, (err, updatedUser) => { 
             if (err) {
-                req.flash(`error`, `Error: Failed to update password`);
+                flash(req, res, FlashType.ERROR, `Error: Failed to update password`);
                 return res.redirect('/forgotPassword');
             }
 
@@ -250,10 +258,10 @@ router.post('/resetPassword', (req, res) => {
                 { hash: updatedUser.hash, salt: updatedUser.salt, $unset: { token: 1, tokenExpire: 1, tokenType: 1 } },
                 (err, result) => {
                     if (err || result.modifiedCount != 1) {
-                        req.flash(`error`, `Error: Failed to update password, please try again`);
+                        flash(req, res, FlashType.ERROR, `Error: Failed to update password, please try again`);
                         return res.redirect('/forgotPassword');
                     } else {
-                        req.flash(`success`, `Password successfully changed!`);
+                        flash(req, res, FlashType.SUCCESS, `Password successfully changed!`);
                         return res.redirect('/login');
                     }
             });
@@ -269,7 +277,7 @@ router.get('/logout', (req, res) => {
         }
     });
 
-    req.flash(`success`, `Logged you out!`);
+    flash(req, res, FlashType.SUCCESS, `Logged you out!`);
 
     // send them back to the login page
     res.redirect('/login');
