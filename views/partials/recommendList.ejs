@@ -6,13 +6,13 @@
         <%
             let linkName = recommendation.restaurant.name;
             let menuItemPart = ``;
-            if (typeof recommendation.menuItem !== 'undefined' && recommendation.menuItem) {
+            if ('menuItem' in recommendation && recommendation.menuItem) {
                 menuItemPart += `/menuItems/${recommendation.menuItem._id}`;
                 linkName = recommendation.menuItem.name;
             }
         %>
         <div class="row new-item-form no-margin">
-            <% if ('preventDelete' in recommendation) { %>
+            <% if ('preventDelete' in recommendation && recommendation.preventDelete) { %>
             <div class="col-12 centered low-padding">
             <% } else { %>
             <div class="col-10 centered low-padding">
@@ -22,7 +22,7 @@
                 </a>
             </div>
 
-            <% if (!('preventDelete' in recommendation)) { %>
+            <% if (!('preventDelete' in recommendation && recommendation.preventDelete)) { %>
             <div class="col-2 low-padding">
                 <form class="delete-item" action="/users/share/<%= user._id %>/<%= recommendation._id %>?_method=DELETE" onsubmit="return deleteConfirm(`the recommendation for <%= linkName %>`)" method="POST">
                     <button class="btn btn-outline-danger">

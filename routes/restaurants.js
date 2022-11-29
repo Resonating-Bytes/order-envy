@@ -68,14 +68,19 @@ router.get('/', (req, res) => {
                         for (let i = 0; i < recommendations.length; i++) {
                             const restId = recommendations[i].restaurant._id;
                             if (!(restId in uniqueRestaurants)) {
-                                uniqueRestaurants[restId] = recommendations[i];
-                                if (uniqueRestaurants[restId].menuItem) {
-                                    uniqueRestaurants[restId].menuItem = undefined;
-                                    uniqueRestaurants[restId].preventDelete = true;
-                                }
+                                uniqueRestaurants[restId] = {
+                                    _id: recommendations[i]._id,
+                                    restaurant: recommendations[i].restaurant,
+                                    preventDelete: !!recommendations[i].menuItem,
+                                    count: 0,
+                                };
                             }
+                            uniqueRestaurants[restId].count += recommendations[i].from.length;
                         }
                         recommendations = Object.values(uniqueRestaurants);
+
+                        // order the recs based on total count of people recommending the restaurant and any menu items at it
+                        recommendations.sort((a, b) => { return (b.count - a.count); });
                     }
 
                     res.render('restaurants/index', {
@@ -147,7 +152,7 @@ router.get('/:restaurantID', (req, res) => {
                     flash(req, res, FlashType.ERROR, `Error fetching lists: ${err.message}`);
                     return res.redirect(`/restaurants`);
                 } else {
-                    Recommendation.find({ for: req.user, restaurant: req.params.restaurantID }).where('menuItem').ne(null).populate('menuItem').exec((err, recommendations) => {
+                    Recommendation.find({ for: req.user, restaurant: req.params.restaurantID }).where('menuItem').ne(null).populate('menuItem').populate('from').sort('-updatedAt').exec((err, recommendations) => {
                         if (err) {
                             flash(req, res, FlashType.ERROR, `Error fetching recommendations: ${err.message}`);
                             return res.redirect(`/restaurants`);
@@ -160,6 +165,9 @@ router.get('/:restaurantID', (req, res) => {
                                     if (!('ratings' in res.locals)) {
                                         res.locals.ratings = [];
                                     }
+
+                                    // sort the recs based on how many people recommended it, then by when it was created
+                                    recommendations.sort((a, b) => { return (b.from.length - a.from.length); });
                                     res.render('restaurants/show', { restaurant, averageRating, filterUserOwned, lists, recommendations, note, getRatingInfo });
                                 }
                             });
