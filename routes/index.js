@@ -16,13 +16,7 @@ router.get('/', (req, res) => {
         return res.redirect('/restaurants');
     }
 
-    Recommendation.find({for: (req.user || {})._id}).populate('restaurant').populate('menuItem').sort('-updatedAt').exec((err, recommendations) => {
-        if (err) {
-            flash(req, res, FlashType.ERROR, `Failed to grab recommendations: ${err.message}`);
-        }
-        const numRecs = req.query.numRecs || 5;
-        res.render('home', { recommendations: recommendations.slice(0, numRecs) });
-    });
+    res.render('home');
 });
 
 // show signup form

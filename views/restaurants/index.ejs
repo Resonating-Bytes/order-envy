@@ -1,6 +1,8 @@
 <%- include("../partials/header") %>
 
     <div class="centered">
+        <%- include("../partials/recommendList") %>
+
         <h1 class="header-text">Restaurants</h1>
 
         <%- include("../partials/newRestaurant") %>
@@ -18,8 +20,6 @@
         <% if (restaurants.length > 5) { %>
             <%- include("../partials/newRestaurant") %>
         <% } %>
-
-        <%- include("../partials/recommendList") %>
     </div>
 
 <%- include("../partials/footer") %>

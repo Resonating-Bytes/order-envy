@@ -7,6 +7,7 @@ const { cacheMenuItem } = require('../middleware/menuItem');
 const { userOwnsRating } = require('../middleware/rating');
 const { flash, FlashType, getRatingInfo } = require('../utils/misc');
 const Rating = require('../models/rating');
+const Recommendation = require('../models/recommendation');
 
 // helper to build up route based on available pieces from request
 function _buildRedirectRoute(restaurant, menuItem) {
@@ -43,16 +44,42 @@ router.post('/', isLoggedIn, cacheRestaurant, cacheMenuItem, (req, res) => {
         if (err) {
             flash(req, res, FlashType.ERROR, `Error creating rating: ${err.message}`);
         } else {
+            let subQuery = {}
             if (menuItem) {
                 menuItem.ratings.push(createdRating);
                 menuItem.save();
+
+                // grab recs for the menu item or the restaurant it is at
+                subQuery = { "$or": [
+                    { menuItem: menuItem._id },
+                    { restaurant: restaurant._id },
+                ]};
             } else if (restaurant) {
                 restaurant.ratings.push(createdRating);
                 restaurant.save();
+
+                // only grab recs for the restaurant itself
+                subQuery = { restaurant: restaurant._id };
             } else {
                 flash(req, res, FlashType.ERROR, `Unknown error creating rating`);
                 return res.redirect('back');
             }
+
+            // clear out any recommendations related to the rating
+            let recQuery = {
+                "$and": [
+                    { for: res.locals.user._id },
+                    subQuery
+                ]
+            };
+            Recommendation.find(recQuery, (err, recommendations) => {
+                const menuItemId = (menuItem ? menuItem._id : null);
+                recommendations.forEach((recommendation) => {
+                    if (!err && recommendation && (recommendation.menuItem == null || recommendation.menuItem.equals(menuItemId))) {
+                        recommendation.remove();
+                    }
+                });
+            });
 
             flash(req, res, FlashType.SUCCESS, `Successfully created rating!`);
             const route = _buildRedirectRoute(restaurant);

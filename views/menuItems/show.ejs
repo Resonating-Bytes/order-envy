@@ -50,6 +50,14 @@
     <% } %>
 
     <div class="container">
+        <% if (menuItem.description) { %>
+            <hr class="spacer">
+            <h2>Description</h2>
+            <div>
+                <%= menuItem.description %>
+            </div>
+        <% } %>
+
         <% if (user) { %>
             <hr class="spacer">
 
@@ -58,14 +66,6 @@
                 <textarea name="note[body]" placeholder="Add notes here..." onchange="document.getElementById('note').submit()" required><%= (note ? note.body : '') %></textarea>
             </form>
             
-            <hr class="spacer">
-        <% } %>
-
-        <% if (menuItem.description) { %>
-            <h2>Description</h2>
-            <div>
-                <%= menuItem.description %>
-            </div>
             <hr class="spacer">
         <% } %>
 

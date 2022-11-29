@@ -1,7 +1,7 @@
 <% if (recommendations.length) { %>
     <%- include("./deleteConfirm") %>
 
-    <h2>Recommendations</h2>
+    <h2 class="header-text">Recommendations</h2>
     <% recommendations.forEach((recommendation) => { %>
         <%
             let linkName = recommendation.restaurant.name;
@@ -11,19 +11,28 @@
                 linkName = recommendation.menuItem.name;
             }
         %>
-        <div class="row">
-            <div class="col-lg-6 float-left">
-                <a href="/restaurants/<%= recommendation.restaurant._id %><%= menuItemPart %>">
+        <div class="row new-item-form no-margin">
+            <% if ('preventDelete' in recommendation) { %>
+            <div class="col-12 centered low-padding">
+            <% } else { %>
+            <div class="col-10 centered low-padding">
+            <% } %>
+                <a class="btn btn-outline-primary bg-light" href="/restaurants/<%= recommendation.restaurant._id %><%= menuItemPart %>">
                     <%= linkName %>
                 </a>
             </div>
-            <div class="col-lg-6 float-right">
-                <form class="delete-item" action="/users/share/<%= user._id %>/<%= recommendation._id %>?_method=DELETE" onsubmit="return deleteConfirm(`<%= linkName %>`)" method="POST">
+
+            <% if (!('preventDelete' in recommendation)) { %>
+            <div class="col-2 low-padding">
+                <form class="delete-item" action="/users/share/<%= user._id %>/<%= recommendation._id %>?_method=DELETE" onsubmit="return deleteConfirm(`the recommendation for <%= linkName %>`)" method="POST">
                     <button class="btn btn-outline-danger">
                         <i class="fas fa-trash"></i>
                     </button>
                 </form>
             </div>
+            <% } %>
         </div>
     <% }); %>
+
+    <hr class="spacer">
 <% } %>

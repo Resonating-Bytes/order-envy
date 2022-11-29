@@ -22,7 +22,7 @@ router.get('/', (req, res) => {
             flash(req, res, FlashType.ERROR, `Error getting restaurants: ${err.message}`);
             res.redirect('/');
         } else {
-            Recommendation.find({ for: req.user, menuItem: undefined }).populate('restaurant').exec((err, recommendations) => {
+            Recommendation.find({ for: req.user }).populate('restaurant').sort('menuItem').exec((err, recommendations) => {
                 if (err) {
                     flash(req, res, FlashType.ERROR, `Error getting restaurants: ${err.message}`);
                     res.redirect('/');
@@ -61,6 +61,22 @@ router.get('/', (req, res) => {
                         <option value="500">500 miles</option>
                         <option value="all">All</option>
                     </select>`;
+
+                    // only show the restaurant that recommendations come from on this page
+                    if (recommendations.length) {
+                        let uniqueRestaurants = {};
+                        for (let i = 0; i < recommendations.length; i++) {
+                            const restId = recommendations[i].restaurant._id;
+                            if (!(restId in uniqueRestaurants)) {
+                                uniqueRestaurants[restId] = recommendations[i];
+                                if (uniqueRestaurants[restId].menuItem) {
+                                    uniqueRestaurants[restId].menuItem = undefined;
+                                    uniqueRestaurants[restId].preventDelete = true;
+                                }
+                            }
+                        }
+                        recommendations = Object.values(uniqueRestaurants);
+                    }
 
                     res.render('restaurants/index', {
                         restaurants: filterByDist(restaurants),
