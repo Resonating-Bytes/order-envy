@@ -71,16 +71,24 @@ router.get('/', (req, res) => {
                                 uniqueRestaurants[restId] = {
                                     _id: recommendations[i]._id,
                                     restaurant: recommendations[i].restaurant,
-                                    preventDelete: !!recommendations[i].menuItem,
+                                    allowDelete: !recommendations[i].menuItem,
                                     count: 0,
+                                    updatedAt: 0,
                                 };
                             }
                             uniqueRestaurants[restId].count += recommendations[i].from.length;
+                            uniqueRestaurants[restId].updatedAt = Math.max(uniqueRestaurants[restId].updatedAt, recommendations[i].updatedAt.getTime());
                         }
                         recommendations = Object.values(uniqueRestaurants);
 
                         // order the recs based on total count of people recommending the restaurant and any menu items at it
-                        recommendations.sort((a, b) => { return (b.count - a.count); });
+                        recommendations.sort((a, b) => {
+                            if (b.count == a.count) {
+                                return b.updatedAt - a.updatedAt;
+                            }
+
+                            return (b.count - a.count);
+                        });
                     }
 
                     res.render('restaurants/index', {
