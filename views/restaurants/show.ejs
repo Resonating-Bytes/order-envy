@@ -39,6 +39,9 @@
 
         <div class="row">
             <div class="col">
+                <%- include("../partials/recommendDropdown") %>
+            </div>
+            <div class="col">
                 <% if (lists.length) { %>
                     <div class="dropdown">
                         <button class="btn btn-outline-primary dropdown-toggle" type="button" data-toggle="dropdown">Add to List</button>
@@ -50,9 +53,6 @@
                         </div>
                     </div>
                 <% } %>
-            </div>
-            <div class="col">
-                <%- include("../partials/recommendDropdown") %>
             </div>
         </div>
     <% } %>
