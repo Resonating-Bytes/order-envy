@@ -1,7 +1,7 @@
 <% if (recommendations.length) { %>
     <%- include("./deleteConfirm") %>
 
-    <h2 class="header-text">Recommendations</h2>
+    <h2 class="page-header">Recommendations</h2>
     <% recommendations.forEach((recommendation) => { %>
         <%
             let linkName = recommendation.restaurant.name;
@@ -13,19 +13,25 @@
         %>
         <div class="row new-item-form no-margin">
             <% if ('allowDelete' in recommendation && recommendation.allowDelete) { %>
-            <div class="col-10 low-padding">
+                <div class="col-10 low-padding">
             <% } else { %>
-            <div class="col-12 low-padding">
-            <% } %>
-            <% if ('from' in recommendation) { %>
+                <div class="col-12 low-padding">
+            <%
+            }
+            const menuItemPage = ('from' in recommendation);
+            if (menuItemPage) {
+            %>
                 by:
                 <% recommendation.from.forEach((from) => { %>
                     <br>
                     <%- from.getFullName() %>
                 <% }); %>
             <% } %> 
-            <a class="btn btn-outline-primary bg-light centered" href="/restaurants/<%= recommendation.restaurant._id %><%= menuItemPart %>">
+                <a class="btn btn-outline-primary bg-light centered" href="/restaurants/<%= recommendation.restaurant._id %><%= menuItemPart %>">
                     <%= linkName %>
+                    <% if (menuItemPage) { %>
+                    <i class="fas fa-chevron-right vertical-center float-right"></i>
+                    <% } %>
                 </a>
             </div>
 

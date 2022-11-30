@@ -59,32 +59,23 @@
 
     <div class="container">
         <hr class="spacer">
-        <% if (user) { %>
-
-            <h2>Notes</h2>
-            <form id="note" action="/restaurants/<%= restaurant._id %>/notes" method="POST">
-                <textarea name="note[body]" placeholder="Add notes here..." onchange="document.getElementById('note').submit()" required><%= (note ? note.body : '') %></textarea>
-            </form>
-
-            <hr class="spacer">
-        <% } %>
 
         <% if (restaurant.website) { %>
-            <h2>Website</h2>
+            <h2 class="header-text">Website</h2>
             <div class="container">
                 <a href="<%= restaurant.website %>" target="_blank"><%= restaurant.website %></a>
             </div>
         <% } %>
 
         <% if (restaurant.phone) { %>
-            <h2>Phone</h2>
+            <h2 class="header-text">Phone</h2>
             <div class="container">
                 <a href="tel:<%= restaurant.phone.replace(/\(|\)| |-/g,'') %>"><%= restaurant.phone %></a>
             </div>
         <% } %>
 
         <% if (restaurant.location && restaurant.location.address) { %>
-            <h2>Address</h2>
+            <h2 class="header-text">Address</h2>
             <div class="container">
                 <a href="http://maps.google.com/maps/place/<%= encodeURIComponent(restaurant.location.address) %>" target="_blank">
                     <%= restaurant.location.address %>
@@ -93,10 +84,20 @@
         <% } %>
 
         <% if (restaurant.description) { %>
-            <h2>Description</h2>
+            <h2 class="header-text">Description</h2>
             <div class="container">
                 <%= restaurant.description %>
             </div>
+        <% } %>
+
+        <hr class="spacer">
+
+        <% if (user) { %>
+            <h2 class="page-header">Notes</h2>
+            <form id="note" action="/restaurants/<%= restaurant._id %>/notes" method="POST">
+                <textarea name="note[body]" placeholder="Add notes here..." onchange="document.getElementById('note').submit()" required><%= (note ? note.body : '') %></textarea>
+            </form>
+
             <hr class="spacer">
         <% } %>
 
@@ -112,7 +113,7 @@
 
         <h2>
             <div class="row">
-                <div class="col-9">
+                <div class="col-9 page-header">
                     Menu Items
                 </div>
                 <div class="col-3">
@@ -132,7 +133,7 @@
 
                 <div class="row">
                     <div class="col-4">
-                        <h5><%= category.label %></h5>
+                        <h5 class="sub-header-text"><%= category.label %></h5>
                     </div>
                     <div class="col-8">
                     </div>

@@ -24,14 +24,31 @@
 
     <hr class="spacer">
 
-    <h4>
-        First Name: <%= user.firstName %>
-    </h4>
-    <h4>
-        Last Name: <%= user.lastName %>
-    </h4>
-    <h4>
-        Email: <%= user.email %>
-    </h4>
+    <div class="page-header">
+        First Name:
+    </div>
+    <div class="header-text">
+        <% if (user.firstName) { %>
+            <%= user.firstName %>
+        <% } else { %>
+            --
+        <% } %>
+    </div>
+    <div class="page-header">
+        Last Name:
+    </div>
+    <div class="header-text">
+        <% if (user.lastName) { %>
+            <%= user.lastName %>
+        <% } else { %>
+            --
+        <% } %>
+    </div>
+    <div class="page-header">
+        Email:
+    </div>
+    <div class="header-text">
+        <%= user.email %>
+    </div>
 
 <%- include("../partials/footer") %>

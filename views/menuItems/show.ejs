@@ -52,7 +52,7 @@
     <div class="container">
         <% if (menuItem.description) { %>
             <hr class="spacer">
-            <h2>Description</h2>
+            <h2 class="page-header">Description</h2>
             <div>
                 <%= menuItem.description %>
             </div>
@@ -61,7 +61,7 @@
         <% if (user) { %>
             <hr class="spacer">
 
-            <h2>Notes</h2>
+            <h2 class="page-header">Notes</h2>
             <form id="note" action="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>/notes" method="POST">
                 <textarea name="note[body]" placeholder="Add notes here..." onchange="document.getElementById('note').submit()" required><%= (note ? note.body : '') %></textarea>
             </form>

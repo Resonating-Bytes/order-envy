@@ -2,69 +2,96 @@
 
     <%- include("../partials/deleteConfirm") %>
 
-    <div class="page-header">
-        Rating Info for
-        <br class="hide-wide">
-        <% if (!!menuItem) { %>
-            <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>"><%= menuItem.name %></a>
-            at
-        <% } %>
-        <a href="/restaurants/<%= restaurant._id %>"><%= restaurant.name %></a>
-    </div>
-
     <div class="row">
-        <div class="col-2">
+        <div class="col-2 centered">
             <a class="btn btn-outline-primary bg-light" href="<%= restaurantRoute %><%= menuItemRoute %>" title="<%= (menuItem ? menuItem.name : restaurant.name) %> Summary">
                 <i class="fas fa-chevron-left"></i>
             </a>
         </div>
-         <% if (user) { %>
-            <div class="col">
-                <div class="row">
-                    <div class="col-6"></div>
-                    <div class="col-3">
-                        <a href="<%= restaurantRoute %><%= menuItemRoute %>/ratings/<%= ratingData._id %>/edit" class="btn btn-outline-warning">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                    </div>
-                    <div class="col-3">
-                        <form class="delete-item" action="<%= restaurantRoute %><%= menuItemRoute %>/ratings/<%= ratingData._id %>?_method=DELETE" onsubmit="return deleteConfirm(`the rating`)" method="POST">
-                            <button class="btn btn-outline-danger">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
-                    </div>
-                </div>
+        <div class="col-10">
+            <div class="page-header">
+                Rating Info for
             </div>
-        <% } %>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-2 centered">
+        </div>
+        <div class="col-10">
+            <% if (!!menuItem) { %>
+                <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>" class="page-header"><%= menuItem.name %></a>
+                <br>
+                <div class="sub-header-text">
+                    at
+            <% } else { %>
+                <div class="page-header">
+            <% } %>
+                <a href="/restaurants/<%= restaurant._id %>" title="<%= restaurant.name %>">
+                    <%= restaurant.name %>
+                </a>
+                <% if (!!menuItem) { %>
+                    : <%= menuItem.category %>
+                <% } %>
+            </div>
+        </div>
     </div>
 
     <hr class="spacer">
 
     <div class="container">
-        <div class="row">
-            <div class="col-6">
-                <h2>Rating</h2>
+        <div class="row row-spacer">
+            <div class="col-4">
+                <h2 class="page-header">Date</h2>
             </div>
-            <div class="col-6">
+            <div class="col-5">
+                <h2 class="header-text"><%- new Date(ratingData.createdAt).toLocaleDateString() %></h2>
+            </div>
+            <div class="col-3">
+                <% if (user) { %>
+                    <a href="<%= restaurantRoute %><%= menuItemRoute %>/ratings/<%= ratingData._id %>/edit" class="btn btn-outline-warning">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                <% } %>
+            </div>
+        </div>
+
+        <div class="row row-spacer">
+            <div class="col-4">
+                <h2 class="page-header">Rating</h2>
+            </div>
+            <div class="col-5">
                 <% const ri = getRatingInfo(ratingInfo, ratingData.rating) %>
-                <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
+                <picture>
+                    <source srcset="<%= ri.img %>.png" media="(max-width: 999px)">
+                    <source srcset="<%= ri.img %>Large.png">
+                    <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
+                </picture>
+            </div>
+            <div class="col-3">
+                <% if (user) { %>
+                    <form class="delete-item" action="<%= restaurantRoute %><%= menuItemRoute %>/ratings/<%= ratingData._id %>?_method=DELETE" onsubmit="return deleteConfirm(`the rating`)" method="POST">
+                        <button class="btn btn-outline-danger">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                <% } %>
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-6">
-                <h2>Date</h2>
+        <% if (ratingData.comment.length) { %>
+            <div class="row">
+                <div class="col">
+                    <h2 class="page-header">Comment</h2>
+                </div>
             </div>
-            <div class="col-6">
-                <h2><%- new Date(ratingData.createdAt).toLocaleDateString() %></h2>
+            <div class="row">
+                <div class="col">
+                    <div class="menu-item-container">
+                        <%= ratingData.comment %>
+                    </div>
+                </div>
             </div>
-        </div>
-
-        <h2>Comment</h2>
-        <div class="menu-item-container">
-            <%= ratingData.comment %>
-        </div>
+        <% } %>
     </div>
 
 <%- include("../partials/footer") %>
