@@ -10,32 +10,31 @@
                 menuItemPart += `/menuItems/${recommendation.menuItem._id}`;
                 linkName = recommendation.menuItem.name;
             }
-        %>
-        <div class="row new-item-form no-margin">
-            <% if ('allowDelete' in recommendation && recommendation.allowDelete) { %>
-                <div class="col-10 low-padding">
-            <% } else { %>
-                <div class="col-12 low-padding">
-            <%
-            }
             const menuItemPage = ('from' in recommendation);
             if (menuItemPage) {
-            %>
+        %>
+            <div class="row new-item-form no-margin">
                 by:
                 <% recommendation.from.forEach((from) => { %>
                     <br>
-                    <%- from.getFullName() %>
+                    <%- from._id.equals(user._id) ? "me" : from.getFullName() %>
                 <% }); %>
-            <% } %> 
+            </div>
+        <%
+            }
+        %> 
+        <div class="row new-item-form no-margin">
+            <% if ('noDelete' in recommendation && recommendation.noDelete) { %>
+                <div class="col-12 low-padding">
+            <% } else { %>
+                <div class="col-10 low-padding">
+            <% } %>
                 <a class="btn btn-outline-primary bg-light centered" href="/restaurants/<%= recommendation.restaurant._id %><%= menuItemPart %>">
                     <%= linkName %>
-                    <% if (menuItemPage) { %>
-                    <i class="fas fa-chevron-right vertical-center float-right"></i>
-                    <% } %>
                 </a>
             </div>
 
-            <% if ('allowDelete' in recommendation && recommendation.allowDelete) { %>
+            <% if (!('noDelete' in recommendation && recommendation.noDelete)) { %>
             <div class="col-2 low-padding">
                 <form class="delete-item" action="/users/share/<%= user._id %>/<%= recommendation._id %>?_method=DELETE" onsubmit="return deleteConfirm(`the recommendation for <%= linkName %>`)" method="POST">
                     <button class="btn btn-outline-danger">

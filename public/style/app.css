@@ -196,3 +196,7 @@ form textarea {
         display: none;
     }
 }
+
+.recommendation-exists {
+    width: 100%;
+}

@@ -32,16 +32,36 @@
             <% } %>
 
             <div class="row">
-                <div class="col-4">
+                <div class="col-5">
                     <div class="row">
                         <%= new Date(info.ratingData.createdAt).toLocaleDateString() %>
                     </div>
                     <div class="row">
-                        <% const ri = getRatingInfo(ratingInfo, info.ratingData.rating) %>
-                        <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
+                        <div class="col-5">
+                            <% const ri = getRatingInfo(ratingInfo, info.ratingData.rating) %>
+                            <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
+                        </div>
+                        <div class="col-7">
+                            <% if (recommendations.indexOf((info.menuItem ? info.menuItem._id : info.restaurant._id).valueOf()) === -1) { %>
+                                <!-- link to create a recommendation -->
+                                <%
+                                let restaurantPart = `restaurant=${info.restaurant._id}`;
+                                let menuItemPart = ``; 
+                                if (info.menuItem) {
+                                    menuItemPart += `&menuItem=${info.menuItem._id}`;
+                                }
+                                %>
+                                <a class="btn btn-outline-primary bg-light" href="/users/share/<%= user._id %>?<%= restaurantPart %><%= menuItemPart %>" title="Add Recommendation">
+                                    <i class="fa-regular fa-star"></i>
+                                </a>
+                            <% } else { %>
+                                <!-- already has a recommendatino, show a solid star instead -->
+                                <i class="fa-solid fa-star btn-outline-primary centered recommendation-exists"></i>
+                            <% } %>
+                        </div>
                     </div>
                 </div>
-                <div class="col-8">
+                <div class="col-7">
                     <div class="row">
                         <% if (info.restaurant) { %>
                             <% if (info.menuItem) { %>

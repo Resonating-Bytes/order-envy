@@ -71,7 +71,7 @@ router.get('/', (req, res) => {
                                 uniqueRestaurants[restId] = {
                                     _id: recommendations[i]._id,
                                     restaurant: recommendations[i].restaurant,
-                                    allowDelete: !recommendations[i].menuItem,
+                                    noDelete: !!(recommendations[i].menuItem),
                                     count: 0,
                                     updatedAt: 0,
                                 };

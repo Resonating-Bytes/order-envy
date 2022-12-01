@@ -6,6 +6,7 @@ const isLoggedIn = require('../middleware/isLoggedIn');
 const Friends = require('../models/friends');
 const MenuItem = require('../models/menuItem');
 const Rating = require('../models/rating');
+const Recommendation = require('../models/recommendation');
 const Restaurant = require('../models/restaurant');
 const User = require('../models/user');
 const { flash, FlashType, getActiveFriendRequestsQuery, getRatingInfo, generateToken, TokenType } = require('../utils/misc');
@@ -237,13 +238,12 @@ router.get('/:friendID', isLoggedIn, (req, res) => {
 
                     // track the menu item IDs involved so we can get the restaurants they are owned by next
                     let menuItemIds = [];
-                    let menuItemLookup = {}
                     menuItems.forEach((menuItem) => {
                         menuItemIds.push(menuItem._id);
                         menuItem.ratings.forEach((ratingId) => {
                             if (ratingId in recentLookup) {
-                                recent[recentLookup[ratingId]].menuItem = menuItem;
-                                menuItemLookup[menuItem._id] = ratingId;
+                                const ratingIdx = recentLookup[ratingId];
+                                recent[ratingIdx].menuItem = menuItem;
                             }
                         });
                     });
@@ -254,26 +254,34 @@ router.get('/:friendID', isLoggedIn, (req, res) => {
                             "$in": menuItemIds
                         }
                     };
-                    Restaurant.find({"$or": [ratingQuery, menuItemsQuery]}).exec((err, restaurants) => {
+                    Restaurant.find({"$or": [ratingQuery, menuItemsQuery]}).populate('menuItems').exec((err, restaurants) => {
                         if (err) {
                             flash(req, res, FlashType.ERROR, `Error getting restaurants for friend: ${err.message}`);
                             return res.redirect(`/users/${res.locals.user._id}/friends`);
                         }
 
-                        restaurants.forEach((restaurant) => {
-                            restaurant.ratings.forEach((ratingId) => {
+                        const processRatings = (ratings, restaurant) => {
+                            let foundRating = false;
+                            for (let i = 0; i < ratings.length; i++) {
+                                const ratingId = ratings[i];
                                 if (ratingId in recentLookup) {
                                     const ratingIdx = recentLookup[ratingId];
                                     recent[ratingIdx].restaurant = restaurant;
+                                    foundRating = true;
                                 }
-                            });
+                            }
 
-                            restaurant.menuItems.forEach((menuItemId) => {
-                                const ratingId = menuItemLookup[menuItemId];
-                                if (ratingId in recentLookup) {
-                                    const ratingIdx = recentLookup[ratingId];
-                                    recent[ratingIdx].restaurant = restaurant;
-                                }
+                            return foundRating;
+                        };
+
+                        let restaurantIds = new Set();
+                        restaurants.forEach((restaurant) => {
+                            if (processRatings(restaurant.ratings, restaurant)) {
+                                restaurantIds.add(restaurant._id);
+                            }
+
+                            restaurant.menuItems.forEach((menuItem) => {
+                                processRatings(menuItem.ratings, restaurant);
                             });
                         });
 
@@ -285,12 +293,40 @@ router.get('/:friendID', isLoggedIn, (req, res) => {
                                 return res.redirect(`/users/${res.locals.user._id}/friends`);
                             }
 
-                            const end = start + pageSize;
-                            const urlBase = `/users/${res.locals.user._id}/friends/${req.params.friendID}?p=`;
-                            const prevPage = (page > 0 ? urlBase + (Number(page) - 1) : undefined);
-                            const nextPage = (end < count ? urlBase + (Number(page) + 1) : undefined);
-                            const friendName = friend.getFullName();
-                            res.render('friends/show', { friendName, recent, prevPage, nextPage, getRatingInfo });
+                            // look for recs for the active user that relate to the restaurants and menu items being displayed
+                            const recQuery = {
+                                for: res.locals.user,
+                                "$or": [
+                                    { menuItem: menuItemIds },
+                                    {
+                                        "$and": [
+                                            { restaurant: restaurantIds },
+                                            { menuItem: undefined },
+                                        ]
+                                    },
+                                ]
+                            };
+                            Recommendation.find(recQuery, (err, recObjs) => {
+                                if (err) {
+                                    recObjs= [];
+                                }
+
+                                // convert from the full DB object to just the rec IDs
+                                let recommendations = [];
+                                recObjs.forEach((rec) => {
+                                    recommendations.push((rec.menuItem ? rec.menuItem._id : rec.restaurant._id).valueOf());
+                                });
+
+                                // remove any entries that didn't get a restaurant set
+                                recent = recent.filter((r) => { return !!r.restaurant; });
+
+                                const end = start + pageSize;
+                                const urlBase = `/users/${res.locals.user._id}/friends/${req.params.friendID}?p=`;
+                                const prevPage = (page > 0 ? urlBase + (Number(page) - 1) : undefined);
+                                const nextPage = (end < count ? urlBase + (Number(page) + 1) : undefined);
+                                const friendName = friend.getFullName();
+                                res.render('friends/show', { friendName, recent, recommendations, prevPage, nextPage, getRatingInfo });
+                            });
                         });
                     });
                 });
