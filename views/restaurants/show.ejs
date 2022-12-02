@@ -58,39 +58,43 @@
     <% } %>
 
     <div class="container">
+        <% if (restaurant.website || restaurant.phone || (restaurant.location && restaurant.location.address) || restaurant.description) { %>
+            <hr class="spacer">
+
+            <% if (restaurant.website) { %>
+                <h2 class="header-text">Website</h2>
+                <div class="container">
+                    <a href="<%= restaurant.website %>" target="_blank"><%= restaurant.website %></a>
+                </div>
+            <% } %>
+
+            <% if (restaurant.phone) { %>
+                <h2 class="header-text">Phone</h2>
+                <div class="container">
+                    <a href="tel:<%= restaurant.phone.replace(/\(|\)| |-/g,'') %>"><%= restaurant.phone %></a>
+                </div>
+            <% } %>
+
+            <% if (restaurant.location && restaurant.location.address) { %>
+                <h2 class="header-text">Address</h2>
+                <div class="container">
+                    <a href="http://maps.google.com/maps/place/<%= encodeURIComponent(restaurant.location.address) %>" target="_blank">
+                        <%= restaurant.location.address %>
+                    </a>
+                </div>
+            <% } %>
+
+            <% if (restaurant.description) { %>
+                <h2 class="header-text">Description</h2>
+                <div class="container">
+                    <%= restaurant.description %>
+                </div>
+            <% } %>
+        <% } %> 
+
         <hr class="spacer">
 
-        <% if (restaurant.website) { %>
-            <h2 class="header-text">Website</h2>
-            <div class="container">
-                <a href="<%= restaurant.website %>" target="_blank"><%= restaurant.website %></a>
-            </div>
-        <% } %>
-
-        <% if (restaurant.phone) { %>
-            <h2 class="header-text">Phone</h2>
-            <div class="container">
-                <a href="tel:<%= restaurant.phone.replace(/\(|\)| |-/g,'') %>"><%= restaurant.phone %></a>
-            </div>
-        <% } %>
-
-        <% if (restaurant.location && restaurant.location.address) { %>
-            <h2 class="header-text">Address</h2>
-            <div class="container">
-                <a href="http://maps.google.com/maps/place/<%= encodeURIComponent(restaurant.location.address) %>" target="_blank">
-                    <%= restaurant.location.address %>
-                </a>
-            </div>
-        <% } %>
-
-        <% if (restaurant.description) { %>
-            <h2 class="header-text">Description</h2>
-            <div class="container">
-                <%= restaurant.description %>
-            </div>
-        <% } %>
-
-        <hr class="spacer">
+        <%- include("../partials/recommendList") %>
 
         <% if (user) { %>
             <h2 class="page-header">Notes</h2>
@@ -108,8 +112,6 @@
         <%- include("../partials/ratings", {baseRatingLink, ratings, getRatingInfo}) %>
 
         <hr class="spacer">
-
-        <%- include("../partials/recommendList") %>
 
         <h2>
             <div class="row">
@@ -144,41 +146,43 @@
                     <% } %>
 
                     <div class="row no-margin">
-                        <div class="col-10 low-padding">
+                        <div class="col-3 rating-btn low-padding">
                             <% if (user) { %>
-                                <div class="rating-btn low-padding">
-                                    <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>/ratings/new" class="btn btn-xs btn-outline-primary bg-light low-padding">
-                                        <%
-                                        const avgRating = averageRating(menuItem.ratings, user);
-                                        if (typeof avgRating == 'number') {
-                                        %>
-                                            <% const ri = getRatingInfo(ratingInfo, avgRating) %>
-                                            <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
-                                        <%
-                                        } else {
-                                        %>
-                                            <i class="fa-solid fa-plus"></i>
-                                        <%
-                                        }
-                                        %>
-                                    </a>
-                                </div>
+                                <a href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>/ratings/new" class="btn btn-xs btn-outline-primary bg-light low-padding">
+                                    <%
+                                    const avgRating = averageRating(menuItem.ratings, user);
+                                    if (typeof avgRating == 'number') {
+                                    %>
+                                        <% const ri = getRatingInfo(ratingInfo, avgRating) %>
+                                        <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
+                                    <%
+                                    } else {
+                                    %>
+                                        <i class="fa-solid fa-plus"></i>
+                                    <%
+                                    }
+                                    %>
+                                </a>
                             <% } %>
-                            <div class="rating-content">
-                                <h5 class="menuItem">
-                                    <%= menuItem.name %>
-                                </h5>
-                                <% if (menuItem.description) { %>
-                                    <%= menuItem.description %>
-                                <% } %>
-                            </div>
                         </div>
-                        <div class="col-2 no-padding">
-                            <% if (user) { %>
-                            <a class="btn btn-outline-primary bg-light" href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>" title="See all ratings">
-                                <i class="fas fa-chevron-right"></i>
-                            </a>
-                            <% } %>
+                        <div class="col-9 rating-content low-padding">
+                            <div class="row no-margin">
+                                <div class="col-10 no-padding">
+                                    <h5 class="menuItem">
+                                        <%= menuItem.name %>
+                                    </h5>
+                                    <% if (menuItem.description) { %>
+                                        <%= menuItem.description %>
+                                    <% } %>
+                                </div>
+                                <div class="col-2 no-padding">
+                                    <% if (user) { %>
+                                    <a class="btn btn-outline-primary bg-light" href="/restaurants/<%= restaurant._id %>/menuItems/<%= menuItem._id %>" title="See all ratings">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                    <% } %>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 <% }); %>
