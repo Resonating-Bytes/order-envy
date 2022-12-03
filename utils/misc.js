@@ -80,7 +80,7 @@ module.exports = {
         }
     
         // swap out characters that mess with the address
-        var id = buf.toString('base64').slice(0, -2).replaceAll(/=|\/|\?/g, '_');
+        var id = buf.toString('base64').slice(0, -2).replace(/=|\/|\?/g, '_');
         return id;
     },
 
