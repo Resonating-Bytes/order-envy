@@ -1,13 +1,11 @@
 const express = require('express');
 const router = express.Router({mergeParams: true});
 const passport = require('passport');
-const nodemailer = require('nodemailer');
 
 const Friends = require('../models/friends');
-const Recommendation = require('../models/recommendation');
 const User = require('../models/user');
 
-const { flash, FlashType, generateToken, getActiveFriendRequestsQuery, TokenType } = require('../utils/misc');
+const { flash, FlashType, generateToken, getActiveFriendRequestsQuery, sendEmail, TokenType } = require('../utils/misc');
 
 // index route
 router.get('/', (req, res) => {
@@ -55,29 +53,15 @@ router.post('/register', (req, res) => {
         passport.authenticate('local', {
             failureRedirect: '/register',
         })(req, res, () => {
-            const transporter = nodemailer.createTransport({
-                service: 'gmail',
-                auth: {
-                    user: process.env.EMAIL,
-                    pass: process.env.EMAIL_PASSWORD,
-                }
-            });
-
-            const mailOptions = {
-                from: 'no-reply@orderenvy.com',
-                replyTo: 'no-reply@orderenvy.com',
-                to: req.body.username,
-                subject: 'Confirm Order Envy account',
-                html: '<h1>Welcome to Order Envy</h1>' +
-                    '<p>Use <a href="' + req.headers.origin + '/register/' + token + '">this link</a> to confirm your account</p>' +
-                    '<p>NOTE: the password will expire in one hour</p>'
-            };
-        
-            transporter.sendMail(mailOptions, (error, info) => {
-                if (error) {
+            const subjectMsg = 'Confirm Order Envy account';
+            const htmlMsg = '<h1>Welcome to Order Envy</h1>' +
+                '<p>Use <a href="' + req.headers.origin + '/register/' + token + '">this link</a> to confirm your account</p>' +
+                '<p>NOTE: the password will expire in one hour</p>';
+            sendEmail(req.body.username, subjectMsg, htmlMsg, (error, info) => {
+                if (error || info.rejected.length) {
                     // remove the user entry since it wasn't set up properly
                     req.user.remove();
-                    flash(req, res, FlashType.ERROR, `Error: Failed to send email: ` + error);
+                    flash(req, res, FlashType.ERROR, `Error: Failed to send email: ` + (error ? error : "unknown error"));
                     return res.redirect('/register');
                 } else {
                     req.logout({keepSessionInfo: false}, (err) => {
@@ -179,27 +163,13 @@ router.post('/forgotPassword', (req, res) => {
                     flash(req, res, FlashType.ERROR, `Error: Failed to generate reset token, please try again`);
                     return res.redirect('/forgotPassword');
                 } else {
-                    const transporter = nodemailer.createTransport({
-                        service: 'gmail',
-                        auth: {
-                            user: process.env.EMAIL,
-                            pass: process.env.EMAIL_PASSWORD,
-                        }
-                    });
-
-                    const mailOptions = {
-                        from: 'no-reply@orderenvy.com',
-                        replyTo: 'no-reply@orderenvy.com',
-                        to: user.username,
-                        subject: 'Reset Order Envy password',
-                        html: '<h1>Order Envy</h1>' +
-                            '<p>Use <a href="' + req.headers.origin + '/resetPassword/' + token + '">this link</a> to complete the reset process</p>' +
-                            '<p>NOTE: the password will expire in one hour</p>'
-                    };
-
-                    transporter.sendMail(mailOptions, (error, info) => {
-                        if (error) {
-                            flash(req, res, FlashType.ERROR, `Error: Failed to send email: ` + error);
+                const subjectMsg = 'Reset Order Envy password';
+                const htmlMsg = '<h1>Order Envy</h1>' +
+                    '<p>Use <a href="' + req.headers.origin + '/resetPassword/' + token + '">this link</a> to complete the reset process</p>' +
+                    '<p>NOTE: the password will expire in one hour</p>';
+                sendEmail(user.username, subjectMsg, htmlMsg, (error, info) => {
+                        if (error || info.rejected.length) {
+                            flash(req, res, FlashType.ERROR, `Error: Failed to send email: ` + (error ? error : "unknown error"));
                             return res.redirect('/forgotPassword');
                         } else {
                             flash(req, res, FlashType.SUCCESS, `Success!`);

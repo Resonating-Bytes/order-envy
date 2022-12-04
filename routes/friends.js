@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router({mergeParams: true});
-const nodemailer = require('nodemailer');
 
 const isLoggedIn = require('../middleware/isLoggedIn');
 const Friends = require('../models/friends');
@@ -9,7 +8,7 @@ const Rating = require('../models/rating');
 const Recommendation = require('../models/recommendation');
 const Restaurant = require('../models/restaurant');
 const User = require('../models/user');
-const { flash, FlashType, getActiveFriendRequestsQuery, getRatingInfo, generateToken, TokenType } = require('../utils/misc');
+const { flash, FlashType, getActiveFriendRequestsQuery, getRatingInfo, generateToken, sendEmail, TokenType } = require('../utils/misc');
 
 // 'index' route
 router.get('/', isLoggedIn, (req, res) => {
@@ -80,29 +79,15 @@ router.post('/', isLoggedIn, (req, res) => {
                         return res.redirect('back');
                     }
 
-                    const transporter = nodemailer.createTransport({
-                        service: 'gmail',
-                        auth: {
-                            user: process.env.EMAIL,
-                            pass: process.env.EMAIL_PASSWORD,
-                        }
-                    });
-
-                    const mailOptions = {
-                        from: 'no-reply@orderenvy.com',
-                        replyTo: 'no-reply@orderenvy.com',
-                        to: foundUser.username,
-                        subject: 'Confirm your Order Envy friend request',
-                        html: '<h1>You have a secret admirer</h1>' +
-                            '<p>Ok, maybe not exactly, but ' + res.locals.user.getFullName() + ' would like to be your friend on Order Envy!</p>' +
-                            '<p>Use <a href="' + req.headers.origin + '/users/' + res.locals.user._id + '/friends/confirm/' + token + '">this link</a> ' +
-                            'to confirm your friend request and help each other to enjoy your next meal more.</p>' +
-                            '<p>NOTE: the request will expire in one week</p>'
-                    };
-                
-                    transporter.sendMail(mailOptions, (error, info) => {
-                        if (error) {
-                            flash(req, res, FlashType.ERROR, `Error: Failed to invite friend: ` + error);
+                    const subjectMsg = 'Confirm your Order Envy friend request';
+                    const htmlMsg = '<h1>You have a secret admirer</h1>' +
+                        '<p>Ok, maybe not exactly, but ' + res.locals.user.getFullName() + ' would like to be your friend on Order Envy!</p>' +
+                        '<p>Use <a href="' + req.headers.origin + '/users/' + res.locals.user._id + '/friends/confirm/' + token + '">this link</a> ' +
+                        'to confirm your friend request and help each other to enjoy your next meal more.</p>' +
+                        '<p>NOTE: the request will expire in one week</p>';
+                    sendEmail(foundUser.username, subjectMsg, htmlMsg, (error, info) => {
+                        if (error || info.rejected.length) {
+                            flash(req, res, FlashType.ERROR, `Error: Failed to invite friend: ` + (error ? error : "unknown error"));
                         } else {
                             flash(req, res, FlashType.SUCCESS, `Request sent!`);
                         }
@@ -150,28 +135,14 @@ router.get('/confirm/:token', isLoggedIn, (req, res) => {
                 // delete the pending request
                 friendRequest.remove();
 
-                const transporter = nodemailer.createTransport({
-                    service: 'gmail',
-                    auth: {
-                        user: process.env.EMAIL,
-                        pass: process.env.EMAIL_PASSWORD,
-                    }
-                });
-
-                const mailOptions = {
-                    from: 'no-reply@orderenvy.com',
-                    replyTo: 'no-reply@orderenvy.com',
-                    to: foundUser.username,
-                    subject: 'You have a new friend!',
-                    html: '<h1>They like you... they REALLY like you!</h1>' +
-                        '<p>' + res.locals.user.getFullName() + ' confirmed your friend request on Order Envy!</p>' +
-                        '<p>Now go and help each other enjoy your meals more and regret less</p>' +
-                        '<a href="' + req.headers.origin + '">OrderEnvy</a>'
-                };
-            
-                transporter.sendMail(mailOptions, (error, info) => {
-                    if (error) {
-                        flash(req, res, FlashType.ERROR, `Error: Failed to confirm friend: ` + error);
+                const subjectMsg = 'You have a new friend!';
+                const htmlMsg = '<h1>They like you... they REALLY like you!</h1>' +
+                    '<p>' + res.locals.user.getFullName() + ' confirmed your friend request on Order Envy!</p>' +
+                    '<p>Now go and help each other enjoy your meals more and regret less</p>' +
+                    '<a href="' + req.headers.origin + '">OrderEnvy</a>';
+                sendEmail(foundUser.username, subjectMsg, htmlMsg, (error, info) => {
+                    if (error || info.rejected.length) {
+                        flash(req, res, FlashType.ERROR, `Error: Failed to confirm friend: ` + (error ? error : "unknown error"));
                         return res.redirect(`/users/${res.locals.user._id}/friends`);
                     }
                 });

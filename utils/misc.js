@@ -1,3 +1,5 @@
+const nodemailer = require('nodemailer');
+
 /**
  * Collection of random reusable utility functions
  */
@@ -115,5 +117,25 @@ module.exports = {
         const tokenExpire = new Date();
         const dateQuery = {tokenExpire: {"$gt": tokenExpire}};
         return {"$and": [{request: userId}, dateQuery]};
-    },    
+    },
+    
+    sendEmail: (toEmail, subjectMsg, htmlMsg, callbackFunc) => {
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL,
+                pass: process.env.EMAIL_PASSWORD,
+            }
+        });
+
+        const mailOptions = {
+            from: 'no-reply@orderenvy.com',
+            replyTo: 'no-reply@orderenvy.com',
+            to: toEmail,
+            subject: subjectMsg,
+            html: htmlMsg,
+        };
+    
+        transporter.sendMail(mailOptions, callbackFunc);
+    },
 }
