@@ -132,14 +132,7 @@ form textarea {
     opacity: 0.5;
 }
 
-[type=radio] {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-[type=checkbox] {
+.hidden-button {
     position: absolute;
     opacity: 0;
     width: 0;

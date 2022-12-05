@@ -28,17 +28,23 @@ router.get('/new', isLoggedIn, cacheRestaurant, (req, res) => {
 // 'create' route
 router.post('/', isLoggedIn, cacheRestaurant, (req, res) => {
     const { menuItem } = req.body;
+    const createRating = menuItem.createRating;
+    delete menuItem.createRating;
     MenuItem.create(menuItem, (err, createdMenuItem) => {
         if (err) {
             flash(req, res, FlashType.ERROR, `Error creating menuItem: ${err.message}`);
             return res.redirect('back');
         } else {
-            flash(req, res, FlashType.SUCCESS, `Successfully created menu item ${createdMenuItem}!`);
+            flash(req, res, FlashType.SUCCESS, `Successfully created menu item ${createdMenuItem.name}!`);
             const { restaurant } = res.locals;
             if (restaurant) {
                 restaurant.menuItems.push(createdMenuItem);
                 restaurant.save();
-                return res.redirect(`/restaurants/${restaurant._id}/menuItems/${createdMenuItem._id}/ratings/new`);
+                if (createRating && createRating === 'on') {
+                    return res.redirect(`/restaurants/${restaurant._id}/menuItems/${createdMenuItem._id}/ratings/new`);
+                } else {
+                    return res.redirect(`/restaurants/${restaurant._id}`);
+                }
             }
         }
 

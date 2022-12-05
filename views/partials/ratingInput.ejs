@@ -4,7 +4,7 @@
             <% ratingInfo.forEach((ri, idx) => { %>
                 <td class="centered rating-image">
                     <label>
-                        <input type="radio" name="ratingData[rating]" value="<%= idx + 1 %>" <% if (ratingData.rating - 1 == idx) { %>checked<% } %>>
+                        <input type="radio" name="ratingData[rating]" value="<%= idx + 1 %>" class="hidden-button" <% if (ratingData.rating - 1 == idx) { %>checked<% } %>>
                         <picture>
                             <source srcset="<%= ri.img %>.png" media="(max-width: 999px)">
                             <source srcset="<%= ri.img %>Large.png">

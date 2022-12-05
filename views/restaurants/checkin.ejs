@@ -12,7 +12,7 @@
                     <% ratingInfo.forEach((ri, idx) => { %>
                         <td class="centered">
                             <label>
-                                <input type="radio" name="<%= restaurant._id %>[rating]" value="<%= idx + 1 %>">
+                                <input type="radio" name="<%= restaurant._id %>[rating]" value="<%= idx + 1 %>" class="hidden-button">
                                 <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
                             </label>
                         </td>
@@ -29,7 +29,7 @@
         <div class="menu-item-container">
             <% restaurant.menuItems.forEach((menuItem) => { %>
                 <div class="rating">
-                    <input type="checkbox" id="<%= menuItem._id %>[id]" name="<%= menuItem._id %>[checked]" value="<%= menuItem._id %>" onclick="toggleMenuItem(this.value)">
+                    <input type="checkbox" id="<%= menuItem._id %>[id]" name="<%= menuItem._id %>[checked]" value="<%= menuItem._id %>" class="hidden-button" onclick="toggleMenuItem(this.value)">
                     <label for="<%= menuItem._id %>[id]"><%= menuItem.name %></label>
                     <div class="form-group" id="<%= menuItem._id %>" hidden>
                         <table class="centered">
@@ -37,7 +37,7 @@
                                 <% ratingInfo.forEach((ri, idx) => { %>
                                     <td class="centered">
                                         <label>
-                                            <input type="radio" name="<%= menuItem._id %>[rating]" value="<%= idx + 1 %>">
+                                            <input type="radio" name="<%= menuItem._id %>[rating]" value="<%= idx + 1 %>" class="hidden-button">
                                             <img src="<%= ri.img %>.png" alt="<%= ri.alt %>" title="<%= ri.title %>">
                                         </label>
                                     </td>
