@@ -15,6 +15,7 @@ let TokenType = {
     NEW_ACCOUNT: 0,
     FORGOT_PASSWORD: 1,
     CONFIRM_FRIEND: 2,
+    INVITE_FRIEND: 2,
 }
 
 module.exports = {
@@ -113,10 +114,10 @@ module.exports = {
         }
     },
 
-    getActiveFriendRequestsQuery: (userId) => {
+    getActiveFriendRequestsQuery: (username) => {
         const tokenExpire = new Date();
         const dateQuery = {tokenExpire: {"$gt": tokenExpire}};
-        return {"$and": [{request: userId}, dateQuery]};
+        return {"$and": [{request: username}, dateQuery]};
     },
     
     sendEmail: (toEmail, subjectMsg, htmlMsg, callbackFunc) => {

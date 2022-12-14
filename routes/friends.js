@@ -12,7 +12,7 @@ const { flash, FlashType, getActiveFriendRequestsQuery, getRatingInfo, generateT
 
 // 'index' route
 router.get('/', isLoggedIn, (req, res) => {
-    Friends.find(getActiveFriendRequestsQuery(res.locals.user._id)).populate('source').exec((err, friendRequests) => {
+    Friends.find(getActiveFriendRequestsQuery(res.locals.user.username)).populate('source').exec((err, friendRequests) => {
         if (err) {
             return res.redirect('back');
         }
@@ -48,7 +48,7 @@ router.post('/', isLoggedIn, (req, res) => {
             const tokenExpire = new Date();
 
             // check if there are any pending friend requests for this pair
-            const friendQuery = {"$and": [{source: res.locals.user._id}, {request: foundUser._id}]};
+            const friendQuery = {"$and": [{source: res.locals.user._id}, {request: foundUser.username}]};
             // and for any expired requests for any users while we are at it
             const dateQuery = {tokenExpire: {"$lt": tokenExpire}};
 
@@ -66,21 +66,21 @@ router.post('/', isLoggedIn, (req, res) => {
                 }
 
                 // then create the new friend request
-                const friends = {
+                const friend = {
                     source: res.locals.user._id,
-                    request: foundUser._id,
+                    request: foundUser.username,
                     token,
                     tokenExpire,
                     tokenType: TokenType.CONFIRM_FRIEND,
                 };
-                Friends.create(friends, (err, newFriend) => {
+                Friends.create(friend, (err, newFriend) => {
                     if (err || !newFriend) {
                         flash(req, res, FlashType.ERROR, `Error adding friend: ${err.message}`);
                         return res.redirect('back');
                     }
 
                     const subjectMsg = 'Confirm your Order Envy friend request';
-                    const htmlMsg = '<h1>You have a secret admirer</h1>' +
+                    const htmlMsg = '<h1>You have a secret (food) admirer</h1>' +
                         '<p>Ok, maybe not exactly, but ' + res.locals.user.getFullName() + ' would like to be your friend on Order Envy!</p>' +
                         '<p>Use <a href="' + req.headers.origin + '/users/' + res.locals.user._id + '/friends/confirm/' + token + '">this link</a> ' +
                         'to confirm your friend request and help each other to enjoy your next meal more.</p>' +
@@ -96,7 +96,13 @@ router.post('/', isLoggedIn, (req, res) => {
                 });
             });
         } else if (foundUsers.length === 0) {
-            flash(req, res, FlashType.ERROR, `Failed to find a user with those details, please try again`);
+            flash(req, res, FlashType.WARNING, 
+                `<form action="/users/${res.locals.user._id}/friends/invite" method="post">` +
+                    `Failed to find a user with those details, would you like to ` +
+                    `<input class="form-control" type="text" name="friendEmail" value="${req.body.friend.email}" hidden>` +
+                    `<button class="btn btn-outline btn-outline-primary">invite</button> them?`+
+                `</form>`
+            );
             return res.redirect('back');
         } else {
             flash(req, res, FlashType.ERROR, `Found more than one user with those details, please be more specific`);
@@ -105,10 +111,54 @@ router.post('/', isLoggedIn, (req, res) => {
     });
 });
 
+// 'invite' route
+router.post('/invite', isLoggedIn, (req, res) => {
+    const friendEmail = req.body.friendEmail;
+    if (!friendEmail || friendEmail === '') {
+        flash(req, res, FlashType.ERROR, `Invalid email, failed to invite them`);
+        return res.redirect(`/users/${res.locals.user._id}/friends/new`);
+    } else {
+        const token = generateToken();
+        const tokenExpire = new Date();
+        tokenExpire.setTime(tokenExpire.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+        const friend = {
+            source: res.locals.user._id,
+            request: friendEmail,
+            token,
+            tokenExpire,
+            tokenType: TokenType.INVITE_FRIEND,
+        };
+        Friends.create(friend, (err, newFriend) => {
+            if (err || !newFriend) {
+                flash(req, res, FlashType.ERROR, `Error adding friend: ${err.message}`);
+                return res.redirect('back');
+            }
+
+            const subjectMsg = 'You have a friend request on OrderEnvy!';
+            const inviteAddr = `${req.headers.origin}/register?from=${encodeURIComponent(res.locals.user._id)}` +
+                `&token=${encodeURIComponent(token)}&usernamePlaceholder=${encodeURIComponent(friendEmail)}`;
+            const htmlMsg = `<h1>How does it feel to be popular?</h1>` +
+                `<p>${res.locals.user.getFullName()} wants to be your friend on Order Envy!</p>` +
+                `<a href="${inviteAddr}">Sign up</a> to add them as your friend and ` +
+                `help each other avoid falling prey to missed meal opportunities.`;
+            sendEmail(friendEmail, subjectMsg, htmlMsg, (error, info) => {
+                if (error || info.rejected.length) {
+                    flash(req, res, FlashType.ERROR, `Error: Failed to invite friend: ` + (error ? error : "unknown error"));
+                } else {
+                    flash(req, res, FlashType.SUCCESS, `Invite sent!`);
+                }
+
+                return res.redirect(`/users/${res.locals.user._id}/friends/new`);
+            });
+        });
+    }
+});
+
 // 'confirm' route
 router.get('/confirm/:token', isLoggedIn, (req, res) => {
     const token = req.params.token;
-    Friends.findOne({ token, tokenType: TokenType.CONFIRM_FRIEND }, (err, friendRequest) => {
+    Friends.findOne({ token, tokenType: { "$in": [TokenType.CONFIRM_FRIEND, TokenType.INVITE_FRIEND] } }, (err, friendRequest) => {
         const localUserID = res.locals.user._id;
         if (err || !friendRequest) {
             flash(req, res, FlashType.ERROR, `Error confirming friend: ${err.message}`);
@@ -145,10 +195,10 @@ router.get('/confirm/:token', isLoggedIn, (req, res) => {
                         flash(req, res, FlashType.ERROR, `Error: Failed to confirm friend: ` + (error ? error : "unknown error"));
                         return res.redirect(`/users/${res.locals.user._id}/friends`);
                     }
-                });
 
-                flash(req, res, FlashType.SUCCESS, `Successfully added friend!`);
-                return res.redirect(`/users/${res.locals.user._id}/friends`);
+                    flash(req, res, FlashType.SUCCESS, `Successfully added friend!`);
+                    return res.redirect(`/users/${res.locals.user._id}/friends`);
+                });
             });
         }
     });
@@ -157,7 +207,7 @@ router.get('/confirm/:token', isLoggedIn, (req, res) => {
 // 'decline' route
 router.delete('/decline/:token', isLoggedIn, (req, res) => {
     const token = req.params.token;
-    Friends.findOne({ token, tokenType: TokenType.CONFIRM_FRIEND }, (err, friendRequest) => {
+    Friends.findOne({ token, tokenType: { "$in": [TokenType.CONFIRM_FRIEND, TokenType.INVITE_FRIEND] } }, (err, friendRequest) => {
         if (err || !friendRequest || !friendRequest.request.equals(res.locals.user._id)) {
             flash(req, res, FlashType.ERROR, `Failed to find a user with those details, please try again`);
         } else {

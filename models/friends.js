@@ -5,13 +5,12 @@ const FriendsSchema = new mongoose.Schema({
     // user requesting to add a friend
     source: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
+        ref: "User",
+        unique: false,
     },
     // who they want to be friends with
-    request: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
-    },
+    request: String,
+    // used to expire the request
     token: String,
     tokenExpire: Date,
     tokenType: Number,
@@ -19,7 +18,5 @@ const FriendsSchema = new mongoose.Schema({
 {
   timestamps: true
 });
-
-FriendsSchema.plugin(passportLocalMongoose);
 
 module.exports = mongoose.model("Friends", FriendsSchema);

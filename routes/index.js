@@ -19,7 +19,12 @@ router.get('/', (req, res) => {
 
 // show signup form
 router.get('/register', (req, res) => {
-    res.render('register');
+    if (req.query.from && req.query.token) {
+        res.cookie('inviteFrom', req.query.from, {maxAge: 5*60*1000, httpOnly: true});
+        res.cookie('inviteToken', req.query.token, {maxAge: 5*60*1000, httpOnly: true});
+    }
+
+    res.render('register', {usernamePlaceholder: req.query.usernamePlaceholder});
 });
 
 // handle signing up a new user
@@ -56,7 +61,7 @@ router.post('/register', (req, res) => {
             const subjectMsg = 'Confirm Order Envy account';
             const htmlMsg = '<h1>Welcome to Order Envy</h1>' +
                 '<p>Use <a href="' + req.headers.origin + '/register/' + token + '">this link</a> to confirm your account</p>' +
-                '<p>NOTE: the password will expire in one hour</p>';
+                '<p>NOTE: the link will expire in one hour</p>';
             sendEmail(req.body.username, subjectMsg, htmlMsg, (error, info) => {
                 if (error || info.rejected.length) {
                     // remove the user entry since it wasn't set up properly
@@ -92,8 +97,62 @@ router.get('/register/:token', (req, res) => {
             user.tokenExpire = undefined;
             user.tokenType = undefined;
             user.save();
-            flash(req, res, FlashType.SUCCESS, `Account validated!`);
-            return res.redirect('/login');
+
+            // check if the user was invited by an existing user
+            if (req.cookies.inviteFrom && req.cookies.inviteToken) {
+                const tokenExpire = new Date();
+                const dateQuery = {tokenExpire: {"$gt": tokenExpire}};
+                const tokenQuery = {token: req.cookies.inviteToken, tokenType: TokenType.INVITE_FRIEND};
+                Friends.findOne({"$and": [{source: req.cookies.inviteFrom, request: user.username}, dateQuery, tokenQuery]}, (error, friendRequest) => {
+                    if (error || !friendRequest) {
+                        flash(req, res, FlashType.ERROR, `Error: Failed to find find friend request: ${err.message}`);
+                        return res.redirect('back');
+                    }
+
+                    User.findById(friendRequest.source, (err, foundUser) => {
+                        if (err) {
+                            flash(req, res, FlashType.ERROR, `Error: Failed to find user: ${err.message}`);
+                            return res.redirect('back');
+                        }
+        
+                        if (user.friends.addToSet(foundUser._id).length) {
+                            user.save();
+                        }
+        
+                        // add the current user to the friend's list as well
+                        if (foundUser.friends.addToSet(user._id).length) {
+                            foundUser.save();
+
+                            // send them an email so they know the invited friend joined
+                            const subjectMsg = 'They said YES!';
+                            const htmlMsg = '<h1>It is a beautiful day to order something new</h1>' +
+                                '<p>' + user.getFullName() + ' accepted your invite to help each other eat better on Order Envy!</p>' +
+                                '<p>Now go and help each other enjoy your meals more and regret less</p>';
+                            sendEmail(foundUser.username, subjectMsg, htmlMsg, (error, info) => {
+                                if (error) {
+                                    console.error(`Error sending invite accept email: ${error}`);
+                                }
+                            });
+                        }
+
+                        // let them know a friend was added
+                        flash(req, res, FlashType.SUCCESS, `Added ${foundUser.getFullName()} as a friend!`);
+
+                        // delete the pending request
+                        friendRequest.remove();
+
+                        // clear the cookies after they are used
+                        res.cookie('inviteFrom', undefined, {maxAge: 0, httpOnly: true});
+                        res.cookie('inviteToken', undefined, {maxAge: 0, httpOnly: true});
+
+                        flash(req, res, FlashType.SUCCESS, `Account validated!`);
+                        return res.redirect('/login');
+                    });
+                });
+            } else {
+                flash(req, res, FlashType.SUCCESS, `Account validated!`);
+                return res.redirect('/login');
+            }
         }
     });
 });
@@ -126,7 +185,7 @@ router.post('/login', passport.authenticate('local', {
             });
         }
     } else {
-        Friends.find(getActiveFriendRequestsQuery(req.user._id)).count((err, friendRequestCount) => {
+        Friends.find(getActiveFriendRequestsQuery(req.user.username)).count((err, friendRequestCount) => {
             if (!err && friendRequestCount) {
                 const baseMsg = (friendRequestCount == 1 ? `You have a pending friend request` : `You have pending friend requests`);
                 flash(req, res, FlashType.INFO, `${baseMsg} <a href="/users/${req.user._id}/friends" class="btn btn-outline btn-outline-primary">here</a>`);

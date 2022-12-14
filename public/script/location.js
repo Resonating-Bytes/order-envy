@@ -118,6 +118,11 @@ function invalidateLatLong() {
     try {
         document.getElementById('lat').value = undefined;
         document.getElementById('long').value = undefined;
+
+        const findMeElem = document.getElementById('findMe');
+        if (findMeElem) {
+            findMeElem.style.display = "inline-block";
+        }
     } catch(err) {
         console.error(`Failed to clear the lat/long fields: ${err}`);
     }

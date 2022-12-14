@@ -105,7 +105,7 @@ router.get('/', (req, res) => {
 
 // 'new' route
 router.get('/new', isLoggedIn, (req, res) => {
-    res.render('restaurants/new');
+    res.render('restaurants/new', {onload: `"findMe('form');"`});
 });
 
 // 'create' route
