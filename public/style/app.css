@@ -67,6 +67,10 @@ form textarea {
     text-align: center;
 }
 
+.right-align {
+    text-align: right;
+}
+
 .vertical-center {
     margin: 0;
     -ms-transform: translateY(25%);

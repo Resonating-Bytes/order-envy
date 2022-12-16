@@ -28,8 +28,8 @@ router.get('/new', isLoggedIn, cacheRestaurant, (req, res) => {
 // 'create' route
 router.post('/', isLoggedIn, cacheRestaurant, (req, res) => {
     const { menuItem } = req.body;
-    const createRating = menuItem.createRating;
-    delete menuItem.createRating;
+    const nextAction = menuItem.nextAction;
+    delete menuItem.nextAction;
     MenuItem.create(menuItem, (err, createdMenuItem) => {
         if (err) {
             flash(req, res, FlashType.ERROR, `Error creating menuItem: ${err.message}`);
@@ -40,11 +40,16 @@ router.post('/', isLoggedIn, cacheRestaurant, (req, res) => {
             if (restaurant) {
                 restaurant.menuItems.push(createdMenuItem);
                 restaurant.save();
-                if (createRating && createRating === 'on') {
-                    return res.redirect(`/restaurants/${restaurant._id}/menuItems/${createdMenuItem._id}/ratings/new`);
-                } else {
-                    return res.redirect(`/restaurants/${restaurant._id}`);
+                if (nextAction) {
+                    if (nextAction === 'rating') {
+                        return res.redirect(`/restaurants/${restaurant._id}/menuItems/${createdMenuItem._id}/ratings/new`);
+                    } else if (nextAction === 'recommend') {
+                        const nextURL = encodeURIComponent(`/restaurants/${restaurant._id}`);
+                        return res.redirect(`/users/share/${res.locals.user._id}?restaurant=${restaurant._id}&menuItem=${createdMenuItem._id}&nextURL=${nextURL}`);
+                    }
                 }
+
+                return res.redirect(`/restaurants/${restaurant._id}`);
             }
         }
 

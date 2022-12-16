@@ -30,8 +30,13 @@ router.get('/', isLoggedIn, (req, res) => {
             }
         }
 
-        // always send them back where they came from
-        return res.redirect('back');
+        if (req.query.nextURL) {
+            // use the supplied URL if one was given
+            return res.redirect(req.query.nextURL);
+        } else {
+            // otherwise send them back where they came from
+            return res.redirect('back');
+        }
     });
 });
 

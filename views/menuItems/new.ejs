@@ -19,12 +19,27 @@
                     <% }); %>
                 </select>
             </div>
-            <div class="row centered">
-                <div class="col">
-                    <input type="checkbox" name="menuItem[createRating]" id="menuItem[createRating]" placeholder="Add a rating for this item next" checked>
-                    <label for="menuItem[createRating]">Add a new rating for this menu item</label>
+
+            <hr class="spacer">
+
+            <div class="row">
+                <div class="col right-align">
+                    <input type="radio" name="menuItem[nextAction]" value="rating" id="menuItem[nextAction]" placeholder="Add a rating for this item next" checked />
+                </div>  
+                <div class="col-10">
+                    Add a new rating for this menu item
+                </div>  
+            </div>  
+            <div class="row">
+                <div class="col right-align">
+                    <input type="radio" name="menuItem[nextAction]" value="recommend" id="menuItem[nextAction]" placeholder="Recommend next time" />
+                </div>  
+                <div class="col-10">
+                    Recommend this menu item next time
                 </div>  
             </div>
+
+            <hr class="spacer">
 
             <%- include("../partials/formButtons") %>
         </form>
