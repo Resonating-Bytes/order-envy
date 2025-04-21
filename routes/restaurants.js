@@ -110,6 +110,14 @@ router.get('/new', isLoggedIn, (req, res) => {
 
 // 'create' route
 router.post('/', isLoggedIn, (req, res) => {
+    if (req.body.lat == undefined || req.body.lat == "undefined" || req.body.lat == null || req.body.lat == "null")
+    {
+        req.body.lat = NaN;
+    }
+    if (req.body.long == undefined || req.body.long == "undefined" || req.body.long == null || req.body.long == "null")
+    {
+        req.body.long = NaN;
+    }
     const newRestaurant = {
         name: req.body.name,
         description: req.body.description,

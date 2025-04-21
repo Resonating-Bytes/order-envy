@@ -9,8 +9,8 @@ const restaurantSchema = new mongoose.Schema({
     phone: String,
     location: {
         address: String,
-        lat: Number,
-        long: Number,
+        lat: mongoose.Schema.Types.Mixed,
+        long: mongoose.Schema.Types.Mixed,
     },
     menuItems: [
         {

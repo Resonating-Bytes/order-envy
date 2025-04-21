@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router({mergeParams: true});
 const request = require('request');
-const {getCookies} = require('../utils/misc');
+const {flash, FlashType, getCookies} = require('../utils/misc');
 
 const {GEO_KEY} = process.env;
 
@@ -10,7 +10,7 @@ router.get('/latlong/:address', (req, res) => {
     const url = `http://www.mapquestapi.com/geocoding/v1/address?key=${GEO_KEY}&location=${address}`;
     request(url, (error, response, body) => {
         if (error) {
-            console.error(`Something went wrong converting ${address} to a lat/long: ${error}`);
+            flash(req, res, FlashType.ERROR, `Something went wrong converting ${address} to a lat/long: ${error}`);
         } else if (response.statusCode == 200) {
             try {
                 const {lat, lng} = JSON.parse(body).results[0].locations[0].latLng;
@@ -18,6 +18,8 @@ router.get('/latlong/:address', (req, res) => {
             } catch(err) {
                 console.error(`Error getting lat/long from ${address}: ${err}`);
             }
+        } else {
+            flash(req, res, FlashType.ERROR, `Something went wrong converting ${address} to a lat/long: error code: ${response.statusCode} body: ${response.body} statusMessage: ${response.statusMessage}`);
         }
 
         // if we made it here, something went wrong
@@ -37,7 +39,7 @@ router.get('/address', (req, res) => {
     const url = `http://www.mapquestapi.com/geocoding/v1/reverse?key=${GEO_KEY}&location=${lat},${long}`;
     request(url, (error, response, body) => {
         if (error) {
-            console.error(`Something went wrong converting ${address} to a lat/long: ${error}`);
+            flash(req, res, FlashType.ERROR, `Something went wrong converting ${address} to a lat/long: ${error}`);
         } else if (response.statusCode == 200) {
             try {
                 const {street, adminArea5, adminArea3, postalCode} = JSON.parse(body).results[0].locations[0];
@@ -48,8 +50,10 @@ router.get('/address', (req, res) => {
                     postalCode,
                 });
             } catch(err) {
-                console.error(`Error getting address from (${lat},${long}): ${err}`);
+                flash(req, res, FlashType.ERROR, `Error getting address from (${lat},${long}): ${err}`);
             }
+        } else {
+            flash(req, res, FlashType.ERROR, `Error getting address from (${lat},${long}): error code: ${response.statusCode} body: ${response.body} statusMessage: ${response.statusMessage}`);
         }
 
         // if we made it here, something went wrong

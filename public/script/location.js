@@ -28,24 +28,29 @@ function findMe(reason) {
                 try {
                     const {street, city, state, postalCode} = res;
                     const addrElem = document.getElementById('address');
-                    if (addrElem && street && city && state && postalCode) {
-                        addrElem.value = `${street}, ${city} ${state} ${postalCode}`;
+                    if (addrElem) {
+                        if (street && city && state && postalCode) {
+                            addrElem.value = `${street}, ${city} ${state} ${postalCode}`;
+
+                            const latElem = document.getElementById('lat');
+                            const longELem = document.getElementById('long');
+                            if (latElem && longELem) {
+                                latElem.value = latitude;
+                                longELem.value = longitude;
+                                const findMeElem = document.getElementById('findMe');
+                                if (findMeElem) {
+                                    findMeElem.style.display = "none";
+                                }
+                            }
+                        } else 
+                        {
+                            addrElem.value = `Failed to find address for ${latitude} ${longitude}`;
+                        }
                     }
                 } catch (err) {
                     console.error(`Error getting address: ${err}`);
                 }
             });
-
-            const latElem = document.getElementById('lat');
-            const longELem = document.getElementById('long');
-            if (latElem && longELem) {
-                latElem.value = latitude;
-                longELem.value = longitude;
-                const findMeElem = document.getElementById('findMe');
-                if (findMeElem) {
-                    findMeElem.style.display = "none";
-                }
-            }
         } else if (reason === 'cookie') {
             const reloadPage = (isNaN(Number(getCookieValue('lat'))) || isNaN(Number(getCookieValue('long'))));
 
