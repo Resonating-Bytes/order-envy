@@ -1,18 +1,17 @@
 const createApiApp = require('../../api/createApp');
 const request = require('supertest');
-const mongoose = require('mongoose');
+const { connectTestDb, disconnectTestDb } = require('../helpers/testDb');
 
-describe('API v1', () => {
+describe('API v1 health and public routes', () => {
     let app;
 
-    beforeAll(() => {
-        process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
-        process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-session-secret';
+    beforeAll(async () => {
+        await connectTestDb();
         app = createApiApp();
     });
 
     afterAll(async () => {
-        await mongoose.disconnect();
+        await disconnectTestDb();
     });
 
     describe('GET /api/v1/health', () => {

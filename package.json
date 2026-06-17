@@ -8,6 +8,7 @@
     "debug": "nodemon --inspect app.js",
     "test": "jest",
     "test:api": "jest --testPathPattern=tests/api",
+    "test:unit": "jest --testPathPattern=tests/unit",
     "publish": "git push heroku master"
   },
   "author": "Eric Arnold",
