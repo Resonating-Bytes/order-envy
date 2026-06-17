@@ -21,6 +21,12 @@ describe('API v1', () => {
             expect(res.status).toBe(200);
             expect(res.body).toEqual({ ok: true, version: 'v1' });
         });
+
+        it('returns ok on Vercel-style /v1/health path', async () => {
+            const res = await request(app).get('/v1/health');
+            expect(res.status).toBe(200);
+            expect(res.body).toEqual({ ok: true, version: 'v1' });
+        });
     });
 
     describe('GET /api/v1/restaurants/meta/ratings', () => {

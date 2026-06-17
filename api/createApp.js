@@ -7,9 +7,10 @@ const apiV1Routes = require('../routes/api/v1');
 const apiErrorHandler = require('../middleware/apiErrorHandler');
 const optionalAuth = require('../middleware/optionalAuth');
 
+const API_PREFIXES = ['/api/v1', '/v1'];
+
 function createApiApp() {
     const app = express();
-    const API_PREFIX = '/api/v1';
 
     app.use(cors({
         origin: process.env.CORS_ORIGIN || '*',
@@ -18,11 +19,17 @@ function createApiApp() {
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
 
-    app.get(`${API_PREFIX}/health`, (req, res) => {
+    const healthHandler = (req, res) => {
         res.json({ ok: true, version: 'v1' });
+    };
+
+    API_PREFIXES.forEach((prefix) => {
+        app.get(`${prefix}/health`, healthHandler);
     });
 
-    app.use(async (req, res, next) => {
+    const apiRouter = express.Router();
+
+    apiRouter.use(async (req, res, next) => {
         try {
             await connectDB();
             next();
@@ -31,8 +38,13 @@ function createApiApp() {
         }
     });
 
-    app.use(optionalAuth);
-    app.use(API_PREFIX, apiV1Routes);
+    apiRouter.use(optionalAuth);
+    apiRouter.use('/', apiV1Routes);
+
+    API_PREFIXES.forEach((prefix) => {
+        app.use(prefix, apiRouter);
+    });
+
     app.use(apiErrorHandler);
 
     return app;
