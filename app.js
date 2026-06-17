@@ -40,7 +40,7 @@ app.use(cookieParser());
 
 // set up express to store session info in the app
 app.use(expressSession({
-    secret: 'This is my super secret message used to encode things',
+    secret: process.env.SESSION_SECRET || 'This is my super secret message used to encode things',
     resave: false,
     saveUninitialized: false,
 }));
@@ -57,6 +57,10 @@ passport.deserializeUser(User.deserializeUser());
 
 // 'body-parse' takes form data and builds a JS object out of it that we can manipulate
 app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.json());
+
+const createApiApp = require('./api/createApp');
+app.use('/api', createApiApp());
 
 const {DATABASE_URL} = process.env;
 mongoose.connect(DATABASE_URL, { useNewUrlParser: true }); // add ':27017' to the address if it needs a port
