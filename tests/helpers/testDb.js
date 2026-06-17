@@ -18,10 +18,7 @@ function getTestDatabaseUrl() {
 }
 
 function resetMongooseCache() {
-    if (global.mongoose) {
-        global.mongoose.conn = null;
-        global.mongoose.promise = null;
-    }
+    delete global.mongoose;
 }
 
 async function connectTestDb() {
@@ -38,6 +35,10 @@ async function connectTestDb() {
 }
 
 async function clearTestDb() {
+    if (mongoose.connection.readyState !== 1) {
+        return;
+    }
+
     const { collections } = mongoose.connection;
     await Promise.all(
         Object.values(collections).map((collection) => collection.deleteMany({}))
@@ -46,7 +47,7 @@ async function clearTestDb() {
 
 async function disconnectTestDb() {
     if (mongoose.connection.readyState !== 0) {
-        await mongoose.disconnect();
+        await mongoose.connection.close();
     }
     resetMongooseCache();
 }
