@@ -9,6 +9,7 @@ const optionalAuth = require('../middleware/optionalAuth');
 
 function createApiApp() {
     const app = express();
+    const API_PREFIX = '/api/v1';
 
     app.use(cors({
         origin: process.env.CORS_ORIGIN || '*',
@@ -17,7 +18,7 @@ function createApiApp() {
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
 
-    app.get('/v1/health', (req, res) => {
+    app.get(`${API_PREFIX}/health`, (req, res) => {
         res.json({ ok: true, version: 'v1' });
     });
 
@@ -31,7 +32,7 @@ function createApiApp() {
     });
 
     app.use(optionalAuth);
-    app.use('/v1', apiV1Routes);
+    app.use(API_PREFIX, apiV1Routes);
     app.use(apiErrorHandler);
 
     return app;

@@ -15,26 +15,26 @@ describe('API v1', () => {
         await mongoose.disconnect();
     });
 
-    describe('GET /v1/health', () => {
+    describe('GET /api/v1/health', () => {
         it('returns ok', async () => {
-            const res = await request(app).get('/v1/health');
+            const res = await request(app).get('/api/v1/health');
             expect(res.status).toBe(200);
             expect(res.body).toEqual({ ok: true, version: 'v1' });
         });
     });
 
-    describe('GET /v1/restaurants/meta/ratings', () => {
+    describe('GET /api/v1/restaurants/meta/ratings', () => {
         it('returns rating info', async () => {
-            const res = await request(app).get('/v1/restaurants/meta/ratings');
+            const res = await request(app).get('/api/v1/restaurants/meta/ratings');
             expect(res.status).toBe(200);
             expect(res.body.ratingInfo).toHaveLength(5);
         });
     });
 
-    describe('POST /v1/auth/login', () => {
+    describe('POST /api/v1/auth/login', () => {
         it('returns 401 for invalid credentials', async () => {
             const res = await request(app)
-                .post('/v1/auth/login')
+                .post('/api/v1/auth/login')
                 .send({ username: 'nobody@example.com', password: 'wrong' });
             expect(res.status).toBe(401);
             expect(res.body.error).toBeDefined();
@@ -43,7 +43,7 @@ describe('API v1', () => {
 
     describe('Protected routes', () => {
         it('returns 401 without token', async () => {
-            const res = await request(app).get('/v1/users/me');
+            const res = await request(app).get('/api/v1/users/me');
             expect(res.status).toBe(401);
         });
     });

@@ -60,7 +60,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 
 const createApiApp = require('./api/createApp');
-app.use('/api', createApiApp());
+app.use(createApiApp());
 
 const {DATABASE_URL} = process.env;
 mongoose.connect(DATABASE_URL, { useNewUrlParser: true }); // add ':27017' to the address if it needs a port
