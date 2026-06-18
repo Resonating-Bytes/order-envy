@@ -127,9 +127,9 @@ export default function RestaurantDetailScreen({ route, navigation }) {
         );
     }
 
-    const { restaurant, categories, userAverageRating } = data;
+    const { restaurant, categories } = data;
     const displayRating = getDisplayRestaurantRating({
-        userAverageRating,
+        restaurant,
         categories,
         userId,
     });

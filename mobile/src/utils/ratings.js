@@ -99,14 +99,11 @@ export function averageDishRatings(categories, userId) {
     return count ? Math.round(total / count) : null;
 }
 
-export function getDisplayRestaurantRating({
-    userAverageRating,
-    categories,
-    userId,
-}) {
-    if (userAverageRating != null) {
+export function getDisplayRestaurantRating({ restaurant, categories, userId }) {
+    const explicit = averageUserRating(restaurant?.ratings, userId);
+    if (explicit != null) {
         return {
-            rating: userAverageRating,
+            rating: explicit,
             label: 'Your average rating',
         };
     }

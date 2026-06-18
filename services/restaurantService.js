@@ -2,7 +2,7 @@ const Restaurant = require('../models/restaurant');
 const Recommendation = require('../models/recommendation');
 const Note = require('../models/note');
 const List = require('../models/list');
-const { averageRating, filterByDistance } = require('../lib/apiHelpers');
+const { averageRating, filterByDistance, getUserRestaurantRating } = require('../lib/apiHelpers');
 
 function normalizeLatLong(val) {
     if (val === undefined || val === 'undefined' || val === null || val === 'null') {
@@ -22,8 +22,23 @@ function groupMenuByCategory(restaurant) {
 }
 
 async function listRestaurants(user, { lat, long, filterDist = 25 } = {}) {
-    let restaurants = await Restaurant.find({}).sort('name');
+    let query = Restaurant.find({}).sort('name');
+    if (user) {
+        query = query
+            .populate({ path: 'ratings' })
+            .populate({ path: 'menuItems', populate: { path: 'ratings' } });
+    }
+
+    let restaurants = await query;
     restaurants = filterByDistance(restaurants, lat, long, filterDist);
+
+    if (user) {
+        restaurants = restaurants.map((restaurant) => {
+            const entry = restaurant.toObject();
+            entry.userAverageRating = getUserRestaurantRating(restaurant, user._id);
+            return entry;
+        });
+    }
 
     let recommendations = [];
     if (user) {

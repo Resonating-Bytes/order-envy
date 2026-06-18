@@ -1,4 +1,4 @@
-const { averageRating, filterByDistance, formatUser } = require('../../lib/apiHelpers');
+const { averageRating, averageDishRatings, getUserRestaurantRating, filterByDistance, formatUser } = require('../../lib/apiHelpers');
 
 describe('apiHelpers', () => {
     describe('averageRating', () => {
@@ -20,6 +20,28 @@ describe('apiHelpers', () => {
             ];
 
             expect(averageRating(ratings, userId)).toBe(3);
+        });
+    });
+
+    describe('getUserRestaurantRating', () => {
+        it('uses explicit restaurant ratings when present', () => {
+            const restaurant = {
+                ratings: [{ user: 'user-a', rating: 4 }],
+                menuItems: [{ ratings: [{ user: 'user-a', rating: 1 }] }],
+            };
+
+            expect(getUserRestaurantRating(restaurant, 'user-a')).toBe(4);
+        });
+
+        it('falls back to dish ratings when restaurant is unrated', () => {
+            const restaurant = {
+                ratings: [],
+                menuItems: [
+                    { ratings: [{ user: 'user-a', rating: 5 }, { user: 'user-a', rating: 3 }] },
+                ],
+            };
+
+            expect(getUserRestaurantRating(restaurant, 'user-a')).toBe(4);
         });
     });
 
