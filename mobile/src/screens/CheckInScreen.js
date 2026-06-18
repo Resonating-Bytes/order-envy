@@ -15,10 +15,18 @@ import {
 } from '../api/client';
 import LoadingView from '../components/LoadingView';
 import RatingPicker from '../components/RatingPicker';
+import ScrollToTopButton from '../components/ScrollToTopButton';
+import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
 import { colors } from '../theme/colors';
 
 export default function CheckInScreen({ route, navigation }) {
     const { restaurantId, restaurantName } = route.params;
+    const {
+        scrollRef,
+        onScroll,
+        scrollToTop,
+        showScrollToTop,
+    } = useAnimatedScreenScroll();
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -118,11 +126,15 @@ export default function CheckInScreen({ route, navigation }) {
     }
 
     return (
-        <ScrollView
-            style={styles.container}
-            contentContainerStyle={styles.content}
-            contentInsetAdjustmentBehavior="automatic"
-        >
+        <View style={styles.screen}>
+            <ScrollView
+                ref={scrollRef}
+                style={styles.container}
+                contentContainerStyle={styles.content}
+                contentInsetAdjustmentBehavior="automatic"
+                onScroll={onScroll}
+                scrollEventThrottle={16}
+            >
             <Text style={styles.title}>{restaurantName}</Text>
             <Text style={styles.subtitle}>What did you have? Rate your visit.</Text>
 
@@ -195,11 +207,16 @@ export default function CheckInScreen({ route, navigation }) {
                     {submitting ? 'Saving...' : `Submit check-in (${selectedMenuCount} items)`}
                 </Text>
             </Pressable>
-        </ScrollView>
+            </ScrollView>
+            <ScrollToTopButton visible={showScrollToTop} onPress={scrollToTop} />
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
+    screen: {
+        flex: 1,
+    },
     container: {
         flex: 1,
         backgroundColor: '#f8faf8',
