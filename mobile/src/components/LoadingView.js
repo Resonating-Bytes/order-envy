@@ -1,10 +1,12 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import { colors } from '../theme/colors';
+
 export default function LoadingView({ message = 'Loading...' }) {
     return (
         <View style={styles.container}>
-            <ActivityIndicator size="large" color="#2d6a4f" />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.message}>{message}</Text>
         </View>
     );

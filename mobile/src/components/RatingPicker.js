@@ -9,6 +9,8 @@ const RATING_LABELS = {
     5: 'Amazing',
 };
 
+import { colors } from '../theme/colors';
+
 export default function RatingPicker({ value, onChange, ratingInfo = [] }) {
     const options = ratingInfo.length
         ? ratingInfo
@@ -54,8 +56,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     buttonSelected: {
-        borderColor: '#2d6a4f',
-        backgroundColor: '#e8f5e9',
+        borderColor: colors.primary,
+        backgroundColor: colors.primaryLight,
     },
     value: {
         fontSize: 18,
@@ -63,7 +65,7 @@ const styles = StyleSheet.create({
         color: '#374151',
     },
     valueSelected: {
-        color: '#1b4332',
+        color: colors.primaryDarker,
     },
     label: {
         marginTop: 2,
@@ -72,6 +74,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     labelSelected: {
-        color: '#1b4332',
+        color: colors.primaryDarker,
     },
 });

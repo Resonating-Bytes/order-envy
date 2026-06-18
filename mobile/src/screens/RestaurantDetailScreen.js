@@ -1,5 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
+    Animated,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -7,13 +8,23 @@ import {
     View,
 } from 'react-native';
 import { fetchRestaurant } from '../api/client';
+import BackHeaderButton from '../components/BackHeaderButton';
 import LoadingView from '../components/LoadingView';
+import ShrinkingScreenHeader, { getExpandedHeaderHeight } from '../components/ShrinkingScreenHeader';
+import { formatDistance, getRestaurantDistance } from '../utils/distance';
+import { requestCurrentLocation } from '../utils/location';
+import { colors } from '../theme/colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function RestaurantDetailScreen({ route, navigation }) {
-    const { restaurantId, restaurantName } = route.params;
+    const { restaurantId, distanceMiles: passedDistanceMiles, restaurantName } = route.params;
+    const insets = useSafeAreaInsets();
+    const headerPadding = getExpandedHeaderHeight(insets.top);
+    const scrollY = useRef(new Animated.Value(0)).current;
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [coords, setCoords] = useState(null);
 
     const loadRestaurant = useCallback(async () => {
         setError('');
@@ -28,6 +39,46 @@ export default function RestaurantDetailScreen({ route, navigation }) {
     React.useEffect(() => {
         loadRestaurant().finally(() => setLoading(false));
     }, [loadRestaurant]);
+
+    React.useEffect(() => {
+        if (passedDistanceMiles != null) return;
+
+        requestCurrentLocation().then((location) => {
+            if (location.granted) {
+                setCoords({ lat: location.lat, long: location.long });
+            }
+        });
+    }, [passedDistanceMiles]);
+
+    const headerTitle = data?.restaurant?.name || restaurantName || 'Restaurant';
+
+    React.useLayoutEffect(() => {
+        navigation.setOptions({
+            headerTransparent: true,
+            headerShadowVisible: false,
+            headerTitle: '',
+            header: () => (
+                <ShrinkingScreenHeader
+                    scrollY={scrollY}
+                    title={headerTitle}
+                    leftAction={(
+                        <BackHeaderButton onPress={() => navigation.goBack()} />
+                    )}
+                />
+            ),
+        });
+    }, [navigation, headerTitle, scrollY]);
+
+    const onScroll = Animated.event(
+        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+        { useNativeDriver: false },
+    );
+
+    const distanceMiles = useMemo(() => {
+        if (passedDistanceMiles != null) return passedDistanceMiles;
+        if (!coords || !data?.restaurant) return null;
+        return getRestaurantDistance(data.restaurant, coords.lat, coords.long);
+    }, [passedDistanceMiles, coords, data?.restaurant]);
 
     if (loading) {
         return <LoadingView message="Loading restaurant..." />;
@@ -48,15 +99,32 @@ export default function RestaurantDetailScreen({ route, navigation }) {
     }
 
     const { restaurant, categories, userAverageRating } = data;
+    const hasAddress = Boolean(restaurant.location?.address);
+    const hasDistance = distanceMiles != null;
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-            <Text style={styles.title}>{restaurant.name}</Text>
+        <ScrollView
+            style={styles.container}
+            contentContainerStyle={[styles.content, { paddingTop: headerPadding }]}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+        >
             {restaurant.description ? (
                 <Text style={styles.description}>{restaurant.description}</Text>
             ) : null}
-            {restaurant.location?.address ? (
-                <Text style={styles.address}>{restaurant.location.address}</Text>
+            {(hasAddress || hasDistance) ? (
+                <View style={styles.addressRow}>
+                    {hasAddress ? (
+                        <Text style={styles.address} numberOfLines={2}>
+                            {restaurant.location.address}
+                        </Text>
+                    ) : (
+                        <View style={styles.addressSpacer} />
+                    )}
+                    {hasDistance ? (
+                        <Text style={styles.distance}>{formatDistance(distanceMiles)}</Text>
+                    ) : null}
+                </View>
             ) : null}
             {userAverageRating ? (
                 <Text style={styles.rating}>Your average rating: {userAverageRating}/5</Text>
@@ -105,32 +173,40 @@ const styles = StyleSheet.create({
         padding: 24,
         backgroundColor: '#f8faf8',
     },
-    title: {
-        fontSize: 26,
-        fontWeight: '700',
-        color: '#1b4332',
-    },
     description: {
-        marginTop: 8,
         fontSize: 15,
         color: '#4b5563',
         lineHeight: 22,
     },
-    address: {
+    addressRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 12,
         marginTop: 8,
+    },
+    address: {
+        flex: 1,
         fontSize: 14,
         color: '#6b7280',
+    },
+    addressSpacer: {
+        flex: 1,
+    },
+    distance: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: colors.primary,
     },
     rating: {
         marginTop: 10,
         fontSize: 14,
         fontWeight: '600',
-        color: '#2d6a4f',
+        color: colors.primary,
     },
     checkinButton: {
         marginTop: 20,
         marginBottom: 12,
-        backgroundColor: '#2d6a4f',
+        backgroundColor: colors.primary,
         borderRadius: 12,
         paddingVertical: 14,
         alignItems: 'center',
@@ -173,7 +249,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     retryButton: {
-        backgroundColor: '#2d6a4f',
+        backgroundColor: colors.primary,
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 8,

@@ -15,6 +15,7 @@ import {
 } from '../api/client';
 import LoadingView from '../components/LoadingView';
 import RatingPicker from '../components/RatingPicker';
+import { colors } from '../theme/colors';
 
 export default function CheckInScreen({ route, navigation }) {
     const { restaurantId, restaurantName } = route.params;
@@ -117,7 +118,11 @@ export default function CheckInScreen({ route, navigation }) {
     }
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <ScrollView
+            style={styles.container}
+            contentContainerStyle={styles.content}
+            contentInsetAdjustmentBehavior="automatic"
+        >
             <Text style={styles.title}>{restaurantName}</Text>
             <Text style={styles.subtitle}>What did you have? Rate your visit.</Text>
 
@@ -152,8 +157,8 @@ export default function CheckInScreen({ route, navigation }) {
                                             checked,
                                             rating: checked ? entry.rating : null,
                                         })}
-                                        trackColor={{ true: '#95d5b2', false: '#d1d5db' }}
-                                        thumbColor={entry.checked ? '#2d6a4f' : '#f4f4f5'}
+                                        trackColor={{ true: colors.primaryMuted, false: '#d1d5db' }}
+                                        thumbColor={entry.checked ? colors.primary : '#f4f4f5'}
                                     />
                                 </View>
                                 {entry.checked ? (
@@ -206,7 +211,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: '700',
-        color: '#1b4332',
+        color: colors.primaryDarker,
     },
     subtitle: {
         marginTop: 6,
@@ -256,7 +261,7 @@ const styles = StyleSheet.create({
     },
     submitButton: {
         marginTop: 8,
-        backgroundColor: '#2d6a4f',
+        backgroundColor: colors.primary,
         borderRadius: 12,
         paddingVertical: 14,
         alignItems: 'center',

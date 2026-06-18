@@ -1,5 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
+    Animated,
     FlatList,
     Pressable,
     RefreshControl,
@@ -8,132 +9,297 @@ import {
     View,
 } from 'react-native';
 import { fetchRestaurants } from '../api/client';
+import DropdownPicker from '../components/DropdownPicker';
 import LoadingView from '../components/LoadingView';
+import LogoutHeaderButton from '../components/LogoutHeaderButton';
+import ShrinkingScreenHeader, { getExpandedHeaderHeight } from '../components/ShrinkingScreenHeader';
 import { useAuth } from '../context/AuthContext';
+import {
+    formatDistance,
+    getRestaurantDistance,
+} from '../utils/distance';
+import { requestCurrentLocation } from '../utils/location';
+import { getSortLabel, getSortOptions, sortRestaurants } from '../utils/sortRestaurants';
+import { colors } from '../theme/colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function RestaurantListScreen({ navigation }) {
-    const { user, logout } = useAuth();
-    const [restaurants, setRestaurants] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [error, setError] = useState('');
+const RADIUS_OPTIONS = [
+    { id: 25, label: '25 miles' },
+    { id: 50, label: '50 miles' },
+    { id: 100, label: '100 miles' },
+    { id: 'all', label: 'All restaurants' },
+];
 
-    const loadRestaurants = useCallback(async () => {
-        setError('');
-        try {
-            const data = await fetchRestaurants();
-            setRestaurants(data.restaurants || []);
-        } catch (err) {
-            setError(err.message || 'Failed to load restaurants');
-        }
-    }, []);
+function getRadiusLabel(filterDist) {
+    return RADIUS_OPTIONS.find((option) => option.id === filterDist)?.label || 'All restaurants';
+}
 
-    React.useEffect(() => {
-        loadRestaurants().finally(() => setLoading(false));
-    }, [loadRestaurants]);
+function getRadiusOptions(locationStatus) {
+    return RADIUS_OPTIONS.map((option) => ({
+        ...option,
+        disabled: locationStatus === 'denied' && option.id !== 'all',
+        hint: locationStatus === 'denied' && option.id !== 'all' ? 'Needs location' : undefined,
+    }));
+}
 
-    async function handleRefresh() {
-        setRefreshing(true);
-        await loadRestaurants();
-        setRefreshing(false);
-    }
-
-    if (loading) {
-        return <LoadingView message="Loading restaurants..." />;
-    }
-
+function ListFiltersHeader({
+    filterDist,
+    sortBy,
+    locationStatus,
+    coords,
+    error,
+    onFilterChange,
+    onSortChange,
+}) {
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <View>
-                    <Text style={styles.greeting}>Hi, {user?.displayName || user?.username}</Text>
-                    <Text style={styles.headerSub}>Your restaurants</Text>
-                </View>
-                <Pressable onPress={logout} style={styles.logoutButton}>
-                    <Text style={styles.logoutText}>Log out</Text>
-                </Pressable>
+        <View>
+            <View style={listHeaderStyles.controlsRow}>
+                <DropdownPicker
+                    label="Within"
+                    value={filterDist}
+                    displayValue={getRadiusLabel(filterDist)}
+                    options={getRadiusOptions(locationStatus)}
+                    onChange={onFilterChange}
+                    menuTitle="Show restaurants within"
+                />
+                <DropdownPicker
+                    label="Sort by"
+                    value={sortBy}
+                    displayValue={getSortLabel(sortBy)}
+                    options={getSortOptions(!!coords)}
+                    onChange={onSortChange}
+                    menuTitle="Sort by"
+                />
             </View>
-
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            <FlatList
-                data={restaurants}
-                keyExtractor={(item) => item._id}
-                refreshControl={(
-                    <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-                )}
-                contentContainerStyle={restaurants.length ? styles.list : styles.listEmpty}
-                ListEmptyComponent={(
-                    <Text style={styles.empty}>No restaurants yet.</Text>
-                )}
-                renderItem={({ item }) => (
-                    <Pressable
-                        style={styles.card}
-                        onPress={() => navigation.navigate('RestaurantDetail', {
-                            restaurantId: item._id,
-                            restaurantName: item.name,
-                        })}
-                    >
-                        <Text style={styles.name}>{item.name}</Text>
-                        {item.description ? (
-                            <Text style={styles.description} numberOfLines={2}>
-                                {item.description}
-                            </Text>
-                        ) : null}
-                        {item.location?.address ? (
-                            <Text style={styles.address} numberOfLines={1}>
-                                {item.location.address}
-                            </Text>
-                        ) : null}
-                    </Pressable>
-                )}
-            />
+            {error ? <Text style={listHeaderStyles.error}>{error}</Text> : null}
         </View>
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f8faf8',
-    },
-    header: {
-        paddingHorizontal: 20,
-        paddingTop: 16,
-        paddingBottom: 12,
+const listHeaderStyles = StyleSheet.create({
+    controlsRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'stretch',
+        gap: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         backgroundColor: '#fff',
         borderBottomWidth: 1,
         borderBottomColor: '#e5e7eb',
     },
-    greeting: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#1b4332',
+    error: {
+        color: '#b91c1c',
+        paddingHorizontal: 20,
+        paddingTop: 8,
+        paddingBottom: 4,
     },
-    headerSub: {
-        fontSize: 13,
-        color: '#6b7280',
-        marginTop: 2,
-    },
-    logoutButton: {
-        paddingVertical: 6,
-        paddingHorizontal: 10,
-    },
-    logoutText: {
-        color: '#2d6a4f',
-        fontWeight: '600',
-    },
+});
+
+export default function RestaurantListScreen({ navigation }) {
+    const { logout } = useAuth();
+    const insets = useSafeAreaInsets();
+    const scrollY = useRef(new Animated.Value(0)).current;
+    const listTopPadding = getExpandedHeaderHeight(insets.top);
+    const [restaurants, setRestaurants] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState('');
+    const [filterDist, setFilterDist] = useState(25);
+    const [sortBy, setSortBy] = useState('name');
+    const [coords, setCoords] = useState(null);
+    const [locationStatus, setLocationStatus] = useState('loading');
+
+    const displayedRestaurants = useMemo(
+        () => sortRestaurants(restaurants, sortBy, coords),
+        [restaurants, sortBy, coords]
+    );
+
+    const loadRestaurants = useCallback(async ({
+        nextFilterDist = filterDist,
+        nextCoords = coords,
+        refreshLocation = false,
+    } = {}) => {
+        setError('');
+
+        let activeCoords = nextCoords;
+        if (refreshLocation || !activeCoords) {
+            const location = await requestCurrentLocation();
+            if (location.granted) {
+                activeCoords = { lat: location.lat, long: location.long };
+                setCoords(activeCoords);
+                setLocationStatus('active');
+            } else {
+                setCoords(null);
+                setLocationStatus('denied');
+                activeCoords = null;
+                if (nextFilterDist !== 'all') {
+                    setFilterDist('all');
+                    nextFilterDist = 'all';
+                }
+            }
+        }
+
+        try {
+            const useLocationFilter = activeCoords && nextFilterDist !== 'all';
+            const data = await fetchRestaurants({
+                lat: useLocationFilter ? activeCoords.lat : undefined,
+                long: useLocationFilter ? activeCoords.long : undefined,
+                filterDist: nextFilterDist,
+            });
+
+            setRestaurants(data.restaurants || []);
+        } catch (err) {
+            setError(err.message || 'Failed to load restaurants');
+        }
+    }, [coords, filterDist]);
+
+    React.useEffect(() => {
+        loadRestaurants({ refreshLocation: true }).finally(() => setLoading(false));
+    }, []);
+
+    React.useLayoutEffect(() => {
+        navigation.setOptions({
+            headerTransparent: true,
+            headerShadowVisible: false,
+            headerTitle: '',
+            header: () => (
+                <ShrinkingScreenHeader
+                    scrollY={scrollY}
+                    title="Restaurants"
+                    rightAction={<LogoutHeaderButton onPress={logout} />}
+                />
+            ),
+        });
+    }, [navigation, logout, scrollY]);
+
+    React.useEffect(() => {
+        if (sortBy === 'distance' && !coords) {
+            setSortBy('name');
+        }
+    }, [coords, sortBy]);
+
+    const handleRefresh = useCallback(async () => {
+        setRefreshing(true);
+        await loadRestaurants({ refreshLocation: true });
+        setRefreshing(false);
+    }, [loadRestaurants]);
+
+    const handleFilterChange = useCallback(async (value) => {
+        if (locationStatus === 'denied' && value !== 'all') {
+            setError('Enable location permission to filter by distance.');
+            return;
+        }
+
+        setError('');
+        setFilterDist(value);
+        setLoading(true);
+        await loadRestaurants({ nextFilterDist: value });
+        setLoading(false);
+    }, [locationStatus, loadRestaurants]);
+
+    const onScroll = Animated.event(
+        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+        { useNativeDriver: false },
+    );
+
+    const renderListHeader = useCallback(() => (
+        <ListFiltersHeader
+            filterDist={filterDist}
+            sortBy={sortBy}
+            locationStatus={locationStatus}
+            coords={coords}
+            error={error}
+            onFilterChange={handleFilterChange}
+            onSortChange={setSortBy}
+        />
+    ), [filterDist, sortBy, locationStatus, coords, error, handleFilterChange]);
+
+    const renderItem = useCallback(({ item }) => {
+        const miles = coords
+            ? getRestaurantDistance(item, coords.lat, coords.long)
+            : null;
+
+        return (
+            <Pressable
+                style={styles.card}
+                onPress={() => navigation.navigate('RestaurantDetail', {
+                    restaurantId: item._id,
+                    restaurantName: item.name,
+                    distanceMiles: miles,
+                })}
+            >
+                <View style={styles.cardHeader}>
+                    <Text style={styles.name}>{item.name}</Text>
+                    {miles != null ? (
+                        <Text style={styles.distance}>{formatDistance(miles)}</Text>
+                    ) : null}
+                </View>
+                {item.description ? (
+                    <Text style={styles.description} numberOfLines={2}>
+                        {item.description}
+                    </Text>
+                ) : null}
+                {item.location?.address ? (
+                    <Text style={styles.address} numberOfLines={1}>
+                        {item.location.address}
+                    </Text>
+                ) : null}
+            </Pressable>
+        );
+    }, [coords, navigation]);
+
+    if (loading && !refreshing && restaurants.length === 0) {
+        return <LoadingView message="Loading restaurants..." />;
+    }
+
+    return (
+        <FlatList
+            style={styles.list}
+            data={displayedRestaurants}
+            keyExtractor={(item) => item._id}
+            renderItem={renderItem}
+            ListHeaderComponent={renderListHeader}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+            refreshControl={(
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={handleRefresh}
+                    tintColor={colors.primary}
+                    progressViewOffset={listTopPadding}
+                />
+            )}
+            contentContainerStyle={
+                displayedRestaurants.length
+                    ? [styles.listContent, { paddingTop: listTopPadding }]
+                    : [styles.listEmpty, { paddingTop: listTopPadding }]
+            }
+            ListEmptyComponent={(
+                <Text style={styles.empty}>
+                    {locationStatus === 'active' && filterDist !== 'all'
+                        ? `No restaurants within ${filterDist} miles.`
+                        : 'No restaurants yet.'}
+                </Text>
+            )}
+        />
+    );
+}
+
+const styles = StyleSheet.create({
     list: {
-        padding: 16,
-        gap: 12,
+        flex: 1,
+    },
+    listContent: {
+        paddingHorizontal: 16,
+        paddingBottom: 16,
+        backgroundColor: '#f8faf8',
     },
     listEmpty: {
         flexGrow: 1,
         justifyContent: 'center',
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingBottom: 16,
+        backgroundColor: '#f8faf8',
     },
     card: {
         backgroundColor: '#fff',
@@ -143,10 +309,22 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#e5e7eb',
     },
+    cardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        gap: 12,
+    },
     name: {
+        flex: 1,
         fontSize: 18,
         fontWeight: '700',
         color: '#111827',
+    },
+    distance: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: colors.primary,
     },
     description: {
         marginTop: 6,
@@ -162,10 +340,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: '#6b7280',
         fontSize: 16,
-    },
-    error: {
-        color: '#b91c1c',
-        paddingHorizontal: 20,
-        paddingTop: 8,
+        paddingVertical: 24,
     },
 });
