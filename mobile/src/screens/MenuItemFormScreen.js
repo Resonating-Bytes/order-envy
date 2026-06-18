@@ -129,6 +129,13 @@ export default function MenuItemFormScreen({ route, navigation }) {
                         restaurantName,
                         focusMenuItemId: result.menuItem._id,
                     });
+                } else if (nextAction === 'recommend') {
+                    navigation.replace('Recommend', {
+                        restaurantId,
+                        restaurantName,
+                        menuItemId: result.menuItem._id,
+                        menuItemName: result.menuItem.name,
+                    });
                 } else {
                     navigation.goBack();
                 }
@@ -222,17 +229,21 @@ export default function MenuItemFormScreen({ route, navigation }) {
                                 Add a rating for this menu item
                             </Text>
                         </Pressable>
-                        <View style={styles.nextActionRow}>
-                            <View style={[styles.radioOuter, styles.radioOuterDisabled]} />
-                            <View style={styles.nextActionTextBlock}>
-                                <Text style={styles.nextActionLabelDisabled}>
-                                    Recommend this menu item
-                                </Text>
-                                <Text style={styles.nextActionHint}>
-                                    Coming when friends are available
-                                </Text>
+                        <Pressable
+                            style={styles.nextActionRow}
+                            onPress={() => setNextAction('recommend')}
+                        >
+                            <View style={[
+                                styles.radioOuter,
+                                nextAction === 'recommend' && styles.radioOuterSelected,
+                            ]}
+                            >
+                                {nextAction === 'recommend' ? <View style={styles.radioInner} /> : null}
                             </View>
-                        </View>
+                            <Text style={styles.nextActionLabel}>
+                                Recommend this menu item
+                            </Text>
+                        </Pressable>
                     </View>
                 ) : null}
 
@@ -249,15 +260,28 @@ export default function MenuItemFormScreen({ route, navigation }) {
                 </Pressable>
 
                 {isEdit ? (
-                    <Pressable
-                        style={[styles.deleteButton, busy && styles.buttonDisabled]}
-                        onPress={handleDelete}
-                        disabled={busy}
-                    >
-                        <Text style={styles.deleteButtonText}>
-                            {deleting ? 'Deleting...' : 'Delete menu item'}
-                        </Text>
-                    </Pressable>
+                    <>
+                        <Pressable
+                            style={styles.recommendButton}
+                            onPress={() => navigation.navigate('Recommend', {
+                                restaurantId,
+                                restaurantName,
+                                menuItemId,
+                                menuItemName: name.trim() || initialName,
+                            })}
+                        >
+                            <Text style={styles.recommendButtonText}>Recommend to...</Text>
+                        </Pressable>
+                        <Pressable
+                            style={[styles.deleteButton, busy && styles.buttonDisabled]}
+                            onPress={handleDelete}
+                            disabled={busy}
+                        >
+                            <Text style={styles.deleteButtonText}>
+                                {deleting ? 'Deleting...' : 'Delete menu item'}
+                            </Text>
+                        </Pressable>
+                    </>
                 ) : null}
             </ScrollView>
             <ScrollToTopButton visible={showScrollToTop} onPress={scrollToTop} />
@@ -376,6 +400,20 @@ const styles = StyleSheet.create({
     },
     saveButtonText: {
         color: '#fff',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    recommendButton: {
+        marginTop: 12,
+        borderRadius: 12,
+        paddingVertical: 14,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#9ca3af',
+        backgroundColor: '#fff',
+    },
+    recommendButtonText: {
+        color: '#374151',
         fontSize: 16,
         fontWeight: '700',
     },

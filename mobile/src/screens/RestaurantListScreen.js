@@ -12,6 +12,8 @@ import DropdownPicker from '../components/DropdownPicker';
 import LoadingView from '../components/LoadingView';
 import LogoutHeaderButton from '../components/LogoutHeaderButton';
 import AddHeaderButton from '../components/AddHeaderButton';
+import FriendsHeaderButton from '../components/FriendsHeaderButton';
+import RecommendationsSection from '../components/RecommendationsSection';
 import RatingImage from '../components/RatingImage';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
@@ -55,11 +57,19 @@ function ListFiltersHeader({
     locationStatus,
     coords,
     error,
+    recommendations,
     onFilterChange,
     onSortChange,
+    onPressRecommendation,
+    onRecommendationDeleted,
 }) {
     return (
         <View>
+            <RecommendationsSection
+                recommendations={recommendations}
+                onPressItem={onPressRecommendation}
+                onDeleted={onRecommendationDeleted}
+            />
             <View style={listHeaderStyles.controlsRow}>
                 <DropdownPicker
                     label="Within"
@@ -113,6 +123,10 @@ export default function RestaurantListScreen({ navigation }) {
         showScrollToTop,
     } = useAnimatedScreenScroll();
 
+    const headerLeftAction = React.useMemo(() => (
+        <FriendsHeaderButton onPress={() => navigation.navigate('Friends')} />
+    ), [navigation]);
+
     const headerRightAction = React.useMemo(() => (
         <View style={styles.headerActions}>
             <AddHeaderButton
@@ -125,6 +139,7 @@ export default function RestaurantListScreen({ navigation }) {
     const headerPadding = useShrinkingScreenHeader(navigation, {
         title: 'Restaurants',
         scrollY,
+        leftAction: headerLeftAction,
         rightAction: headerRightAction,
     });
     const [restaurants, setRestaurants] = useState([]);
@@ -136,6 +151,7 @@ export default function RestaurantListScreen({ navigation }) {
     const [coords, setCoords] = useState(null);
     const [locationStatus, setLocationStatus] = useState('loading');
     const [ratingInfo, setRatingInfo] = useState([]);
+    const [recommendations, setRecommendations] = useState([]);
 
     const displayedRestaurants = useMemo(
         () => sortRestaurants(restaurants, sortBy, coords),
@@ -176,6 +192,7 @@ export default function RestaurantListScreen({ navigation }) {
             });
 
             const rawList = data.restaurants || [];
+            setRecommendations(data.recommendations || []);
 
             if (!userId) {
                 setRestaurants(rawList);
@@ -231,6 +248,13 @@ export default function RestaurantListScreen({ navigation }) {
         setLoading(false);
     }, [locationStatus, loadRestaurants]);
 
+    const handlePressRecommendation = useCallback((item) => {
+        navigation.navigate('RestaurantDetail', {
+            restaurantId: item.restaurantId,
+            restaurantName: item.restaurantName,
+        });
+    }, [navigation]);
+
     const renderListHeader = useCallback(() => (
         <ListFiltersHeader
             filterDist={filterDist}
@@ -238,10 +262,23 @@ export default function RestaurantListScreen({ navigation }) {
             locationStatus={locationStatus}
             coords={coords}
             error={error}
+            recommendations={recommendations}
             onFilterChange={handleFilterChange}
             onSortChange={setSortBy}
+            onPressRecommendation={handlePressRecommendation}
+            onRecommendationDeleted={handleRefresh}
         />
-    ), [filterDist, sortBy, locationStatus, coords, error, handleFilterChange]);
+    ), [
+        filterDist,
+        sortBy,
+        locationStatus,
+        coords,
+        error,
+        recommendations,
+        handleFilterChange,
+        handlePressRecommendation,
+        handleRefresh,
+    ]);
 
     const renderItem = useCallback(({ item }) => {
         const miles = coords

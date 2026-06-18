@@ -9,6 +9,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchRatingMeta, fetchRestaurant } from '../api/client';
 import EditHeaderButton from '../components/EditHeaderButton';
+import RecommendationsSection from '../components/RecommendationsSection';
 import LoadingView from '../components/LoadingView';
 import RatingImage from '../components/RatingImage';
 import ScrollToTopButton from '../components/ScrollToTopButton';
@@ -126,7 +127,7 @@ export default function RestaurantDetailScreen({ route, navigation }) {
         );
     }
 
-    const { restaurant, categories } = data;
+    const { restaurant, categories, recommendations = [] } = data;
     const displayRating = getDisplayRestaurantRating({
         restaurant,
         categories,
@@ -213,6 +214,24 @@ export default function RestaurantDetailScreen({ route, navigation }) {
             >
                 <Text style={styles.addMenuItemButtonText}>Add menu item</Text>
             </Pressable>
+
+            {(user?.id || user?._id) ? (
+                <Pressable
+                    style={styles.recommendButton}
+                    onPress={() => navigation.navigate('Recommend', {
+                        restaurantId,
+                        restaurantName: restaurant.name,
+                    })}
+                >
+                    <Text style={styles.recommendButtonText}>Recommend to...</Text>
+                </Pressable>
+            ) : null}
+
+            <RecommendationsSection
+                recommendations={recommendations}
+                onPressItem={() => {}}
+                onDeleted={() => loadRestaurant({ silent: true })}
+            />
 
             {categories.length === 0 ? (
                 <Text style={styles.emptyMenu}>No menu items yet.</Text>
@@ -349,6 +368,20 @@ const styles = StyleSheet.create({
     },
     addMenuItemButtonText: {
         color: colors.primary,
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    recommendButton: {
+        marginBottom: 12,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        paddingVertical: 14,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#9ca3af',
+    },
+    recommendButtonText: {
+        color: '#374151',
         fontSize: 16,
         fontWeight: '700',
     },

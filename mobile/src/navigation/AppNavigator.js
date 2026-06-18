@@ -10,6 +10,9 @@ import RestaurantDetailScreen from '../screens/RestaurantDetailScreen';
 import RestaurantFormScreen from '../screens/RestaurantFormScreen';
 import MenuItemFormScreen from '../screens/MenuItemFormScreen';
 import CheckInScreen from '../screens/CheckInScreen';
+import FriendsScreen from '../screens/FriendsScreen';
+import AddFriendScreen from '../screens/AddFriendScreen';
+import RecommendScreen from '../screens/RecommendScreen';
 import { colors } from '../theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -54,6 +57,21 @@ function AppStack() {
             <Stack.Screen
                 name="MenuItemForm"
                 component={MenuItemFormScreen}
+                options={{ title: '' }}
+            />
+            <Stack.Screen
+                name="Friends"
+                component={FriendsScreen}
+                options={{ title: '' }}
+            />
+            <Stack.Screen
+                name="AddFriend"
+                component={AddFriendScreen}
+                options={{ title: '' }}
+            />
+            <Stack.Screen
+                name="Recommend"
+                component={RecommendScreen}
                 options={{ title: '' }}
             />
         </Stack.Navigator>

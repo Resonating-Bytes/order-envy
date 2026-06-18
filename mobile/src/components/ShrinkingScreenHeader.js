@@ -10,10 +10,14 @@ const BODY_SMALL = 52;
 
 export const COLLAPSE_DISTANCE = BODY_LARGE - BODY_SMALL;
 
+/** Extra space between the shrinking header chrome and scroll content */
+export const HEADER_CONTENT_GAP = 12;
+
 export { TITLE_LARGE, BODY_LARGE };
 
+/** Top padding for scroll content sitting below a shrinking screen header */
 export function getExpandedHeaderHeight(topInset) {
-    return topInset + BODY_LARGE;
+    return topInset + BODY_LARGE + HEADER_CONTENT_GAP;
 }
 
 export default function ShrinkingScreenHeader({ scrollY, title, leftAction, rightAction }) {
@@ -68,11 +72,13 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
+        gap: 8,
     },
     side: {
         minWidth: 40,
         alignItems: 'center',
         justifyContent: 'center',
+        flexShrink: 0,
     },
     sideLeft: {
         width: 40,
@@ -87,5 +93,6 @@ const styles = StyleSheet.create({
         color: colors.white,
         fontWeight: '700',
         textAlign: 'center',
+        marginHorizontal: 4,
     },
 });

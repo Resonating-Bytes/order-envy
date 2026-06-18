@@ -75,7 +75,7 @@ describe('apiHelpers', () => {
                 email: 'test@example.com',
                 firstName: 'Test',
                 lastName: 'User',
-                friends: [{ _id: 'friend1' }],
+                friends: [{ _id: 'friend1', username: 'friend@example.com', getDisplayName: () => 'Friend One' }],
                 getDisplayName: () => 'Test',
                 getFullName: () => 'Test User',
             };
@@ -88,7 +88,7 @@ describe('apiHelpers', () => {
                 lastName: 'User',
                 displayName: 'Test',
                 fullName: 'Test User',
-                friends: ['friend1'],
+                friends: [{ id: 'friend1', displayName: 'Friend One' }],
             });
         });
     });
