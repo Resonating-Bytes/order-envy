@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { formatDistance, getRestaurantDistance } from '../utils/distance';
 import { requestCurrentLocation } from '../utils/location';
 import { averageUserRating, getDisplayRestaurantRating } from '../utils/ratings';
+import { canOpenRestaurantInMaps, openRestaurantInMaps } from '../utils/maps';
 import { colors } from '../theme/colors';
 
 export default function RestaurantDetailScreen({ route, navigation }) {
@@ -133,6 +134,14 @@ export default function RestaurantDetailScreen({ route, navigation }) {
     });
     const hasAddress = Boolean(restaurant.location?.address);
     const hasDistance = distanceMiles != null;
+    const mapsAvailable = canOpenRestaurantInMaps(restaurant.location);
+
+    function handleOpenMaps() {
+        openRestaurantInMaps({
+            name: restaurant.name,
+            location: restaurant.location,
+        });
+    }
 
     return (
         <View style={styles.screen}>
@@ -149,9 +158,22 @@ export default function RestaurantDetailScreen({ route, navigation }) {
             {(hasAddress || hasDistance) ? (
                 <View style={styles.addressRow}>
                     {hasAddress ? (
-                        <Text style={styles.address} numberOfLines={2}>
-                            {restaurant.location.address}
-                        </Text>
+                        mapsAvailable ? (
+                            <Pressable
+                                style={styles.addressPressable}
+                                onPress={handleOpenMaps}
+                                accessibilityRole="link"
+                                accessibilityLabel={`Open ${restaurant.location.address} in Maps`}
+                            >
+                                <Text style={styles.addressLink} numberOfLines={2}>
+                                    {restaurant.location.address}
+                                </Text>
+                            </Pressable>
+                        ) : (
+                            <Text style={styles.address} numberOfLines={2}>
+                                {restaurant.location.address}
+                            </Text>
+                        )
                     ) : (
                         <View style={styles.addressSpacer} />
                     )}
@@ -274,6 +296,14 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 14,
         color: '#6b7280',
+    },
+    addressPressable: {
+        flex: 1,
+    },
+    addressLink: {
+        fontSize: 14,
+        color: colors.primary,
+        textDecorationLine: 'underline',
     },
     addressSpacer: {
         flex: 1,
