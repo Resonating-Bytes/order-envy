@@ -8,24 +8,22 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchRatingMeta, fetchRestaurant } from '../api/client';
-import BackHeaderButton from '../components/BackHeaderButton';
+import EditHeaderButton from '../components/EditHeaderButton';
 import LoadingView from '../components/LoadingView';
 import RatingImage from '../components/RatingImage';
 import ScrollToTopButton from '../components/ScrollToTopButton';
-import ShrinkingScreenHeader, { getExpandedHeaderHeight } from '../components/ShrinkingScreenHeader';
 import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
+import useShrinkingScreenHeader, { useHeaderBackButton } from '../hooks/useShrinkingScreenHeader';
 import { useAuth } from '../context/AuthContext';
 import { formatDistance, getRestaurantDistance } from '../utils/distance';
 import { requestCurrentLocation } from '../utils/location';
 import { averageUserRating, getDisplayRestaurantRating } from '../utils/ratings';
 import { colors } from '../theme/colors';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function RestaurantDetailScreen({ route, navigation }) {
     const { user } = useAuth();
     const { restaurantId, distanceMiles: passedDistanceMiles, restaurantName } = route.params;
-    const insets = useSafeAreaInsets();
-    const headerPadding = getExpandedHeaderHeight(insets.top);
+    const backButton = useHeaderBackButton(navigation);
     const {
         scrollY,
         scrollRef,
@@ -89,22 +87,22 @@ export default function RestaurantDetailScreen({ route, navigation }) {
 
     const headerTitle = data?.restaurant?.name || restaurantName || 'Restaurant';
 
-    React.useLayoutEffect(() => {
-        navigation.setOptions({
-            headerTransparent: true,
-            headerShadowVisible: false,
-            headerTitle: '',
-            header: () => (
-                <ShrinkingScreenHeader
-                    scrollY={scrollY}
-                    title={headerTitle}
-                    leftAction={(
-                        <BackHeaderButton onPress={() => navigation.goBack()} />
-                    )}
-                />
-            ),
-        });
-    }, [navigation, headerTitle, scrollY]);
+    const headerRightAction = React.useMemo(() => (
+        <EditHeaderButton
+            onPress={() => navigation.navigate('RestaurantForm', {
+                mode: 'edit',
+                restaurantId,
+                restaurantName: headerTitle,
+            })}
+        />
+    ), [navigation, restaurantId, headerTitle]);
+
+    const headerPadding = useShrinkingScreenHeader(navigation, {
+        title: headerTitle,
+        scrollY,
+        leftAction: backButton,
+        rightAction: headerRightAction,
+    });
 
     const distanceMiles = useMemo(() => {
         if (passedDistanceMiles != null) return passedDistanceMiles;
@@ -183,6 +181,21 @@ export default function RestaurantDetailScreen({ route, navigation }) {
                 <Text style={styles.checkinButtonText}>Check in</Text>
             </Pressable>
 
+            <Pressable
+                style={styles.addMenuItemButton}
+                onPress={() => navigation.navigate('MenuItemForm', {
+                    mode: 'create',
+                    restaurantId,
+                    restaurantName: restaurant.name,
+                })}
+            >
+                <Text style={styles.addMenuItemButtonText}>Add menu item</Text>
+            </Pressable>
+
+            {categories.length === 0 ? (
+                <Text style={styles.emptyMenu}>No menu items yet.</Text>
+            ) : null}
+
             {categories.map((category) => (
                 <View key={category.label} style={styles.section}>
                     <Text style={styles.sectionTitle}>{category.label}</Text>
@@ -190,7 +203,17 @@ export default function RestaurantDetailScreen({ route, navigation }) {
                         const itemRating = averageUserRating(item.ratings, userId);
 
                         return (
-                            <View key={item._id} style={styles.menuItem}>
+                            <Pressable
+                                key={item._id}
+                                style={styles.menuItem}
+                                onPress={() => navigation.navigate('MenuItemForm', {
+                                    mode: 'edit',
+                                    restaurantId,
+                                    restaurantName: restaurant.name,
+                                    menuItemId: item._id,
+                                    menuItemName: item.name,
+                                })}
+                            >
                                 <View style={styles.menuItemHeader}>
                                     <View style={styles.menuItemText}>
                                         <Text style={styles.menuItemName}>{item.name}</Text>
@@ -206,7 +229,7 @@ export default function RestaurantDetailScreen({ route, navigation }) {
                                         />
                                     ) : null}
                                 </View>
-                            </View>
+                            </Pressable>
                         );
                     })}
                 </View>
@@ -284,6 +307,25 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '700',
+    },
+    addMenuItemButton: {
+        marginBottom: 12,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        paddingVertical: 14,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.primary,
+    },
+    addMenuItemButtonText: {
+        color: colors.primary,
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    emptyMenu: {
+        fontSize: 14,
+        color: colors.textMuted,
+        marginBottom: 8,
     },
     section: {
         marginTop: 20,

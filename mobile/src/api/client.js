@@ -139,3 +139,63 @@ export async function submitCheckin(restaurantId, body) {
 export async function fetchCurrentUser() {
     return apiFetch('/users/me');
 }
+
+export async function geocodeAddress(address) {
+    return apiFetch(`/location/latlong/${encodeURIComponent(address)}`);
+}
+
+export async function reverseGeocode(lat, long) {
+    const params = new URLSearchParams({
+        lat: String(lat),
+        long: String(long),
+    });
+    return apiFetch(`/location/address?${params}`);
+}
+
+export async function createRestaurant(data) {
+    return apiFetch('/restaurants', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function updateRestaurant(restaurantId, data) {
+    return apiFetch(`/restaurants/${restaurantId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function deleteRestaurant(restaurantId) {
+    return apiFetch(`/restaurants/${restaurantId}`, {
+        method: 'DELETE',
+    });
+}
+
+export async function fetchMenuCategories(restaurantId) {
+    return apiFetch(`/restaurants/${restaurantId}/menu-items/categories`);
+}
+
+export async function fetchMenuItem(restaurantId, menuItemId) {
+    return apiFetch(`/restaurants/${restaurantId}/menu-items/${menuItemId}`);
+}
+
+export async function createMenuItem(restaurantId, data) {
+    return apiFetch(`/restaurants/${restaurantId}/menu-items`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function updateMenuItem(restaurantId, menuItemId, data) {
+    return apiFetch(`/restaurants/${restaurantId}/menu-items/${menuItemId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function deleteMenuItem(restaurantId, menuItemId) {
+    return apiFetch(`/restaurants/${restaurantId}/menu-items/${menuItemId}`, {
+        method: 'DELETE',
+    });
+}

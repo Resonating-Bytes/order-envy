@@ -17,6 +17,7 @@ export default function DropdownPicker({
     onChange,
     disabled = false,
     menuTitle,
+    triggerStyle,
 }) {
     const [open, setOpen] = useState(false);
 
@@ -36,6 +37,7 @@ export default function DropdownPicker({
                 style={[
                     styles.trigger,
                     disabled && styles.triggerDisabled,
+                    triggerStyle,
                 ]}
                 onPress={() => !disabled && setOpen(true)}
                 disabled={disabled}

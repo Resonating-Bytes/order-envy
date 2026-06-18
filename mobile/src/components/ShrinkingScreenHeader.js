@@ -35,7 +35,7 @@ export default function ShrinkingScreenHeader({ scrollY, title, leftAction, righ
         <Animated.View style={[styles.header, { height: headerHeight }]}>
             <View style={[styles.inner, { paddingTop: insets.top }]}>
                 <View style={styles.row}>
-                    <View style={styles.side}>
+                    <View style={[styles.side, styles.sideLeft]}>
                         {leftAction}
                     </View>
                     <Animated.Text
@@ -46,7 +46,7 @@ export default function ShrinkingScreenHeader({ scrollY, title, leftAction, righ
                     >
                         {title}
                     </Animated.Text>
-                    <View style={styles.side}>
+                    <View style={[styles.side, styles.sideRight]}>
                         {rightAction}
                     </View>
                 </View>
@@ -70,9 +70,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     side: {
-        width: 40,
+        minWidth: 40,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    sideLeft: {
+        width: 40,
+    },
+    sideRight: {
+        flexDirection: 'row',
+        gap: 8,
+        flexShrink: 0,
     },
     title: {
         flex: 1,
