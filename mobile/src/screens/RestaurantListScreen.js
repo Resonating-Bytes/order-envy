@@ -7,10 +7,11 @@ import {
     Text,
     View,
 } from 'react-native';
-import { fetchRestaurants } from '../api/client';
+import { fetchRestaurants, fetchRatingMeta } from '../api/client';
 import DropdownPicker from '../components/DropdownPicker';
 import LoadingView from '../components/LoadingView';
 import LogoutHeaderButton from '../components/LogoutHeaderButton';
+import RatingImage from '../components/RatingImage';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import ShrinkingScreenHeader, { getExpandedHeaderHeight } from '../components/ShrinkingScreenHeader';
 import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
@@ -21,6 +22,11 @@ import {
 } from '../utils/distance';
 import { requestCurrentLocation } from '../utils/location';
 import { getSortLabel, getSortOptions, sortRestaurants } from '../utils/sortRestaurants';
+import {
+    enrichRestaurantsFromDetails,
+    enrichRestaurantsWithUserRatings,
+    listIncludesUserRatings,
+} from '../utils/restaurantList';
 import { colors } from '../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -97,7 +103,8 @@ const listHeaderStyles = StyleSheet.create({
 });
 
 export default function RestaurantListScreen({ navigation }) {
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
+    const userId = user?.id || user?._id;
     const insets = useSafeAreaInsets();
     const {
         scrollY,
@@ -115,6 +122,7 @@ export default function RestaurantListScreen({ navigation }) {
     const [sortBy, setSortBy] = useState('name');
     const [coords, setCoords] = useState(null);
     const [locationStatus, setLocationStatus] = useState('loading');
+    const [ratingInfo, setRatingInfo] = useState([]);
 
     const displayedRestaurants = useMemo(
         () => sortRestaurants(restaurants, sortBy, coords),
@@ -154,14 +162,35 @@ export default function RestaurantListScreen({ navigation }) {
                 filterDist: nextFilterDist,
             });
 
-            setRestaurants(data.restaurants || []);
+            const rawList = data.restaurants || [];
+
+            if (!userId) {
+                setRestaurants(rawList);
+                return;
+            }
+
+            if (listIncludesUserRatings(rawList)) {
+                setRestaurants(enrichRestaurantsWithUserRatings(rawList, userId));
+                return;
+            }
+
+            setRestaurants(rawList);
+            enrichRestaurantsFromDetails(rawList, userId)
+                .then(setRestaurants)
+                .catch(() => {});
         } catch (err) {
             setError(err.message || 'Failed to load restaurants');
         }
-    }, [coords, filterDist]);
+    }, [coords, filterDist, userId]);
 
     React.useEffect(() => {
         loadRestaurants({ refreshLocation: true }).finally(() => setLoading(false));
+    }, []);
+
+    React.useEffect(() => {
+        fetchRatingMeta()
+            .then((meta) => setRatingInfo(meta.ratingInfo || []))
+            .catch(() => setRatingInfo([]));
     }, []);
 
     React.useLayoutEffect(() => {
@@ -230,25 +259,35 @@ export default function RestaurantListScreen({ navigation }) {
                     distanceMiles: miles,
                 })}
             >
-                <View style={styles.cardHeader}>
-                    <Text style={styles.name}>{item.name}</Text>
-                    {miles != null ? (
-                        <Text style={styles.distance}>{formatDistance(miles)}</Text>
-                    ) : null}
+                <View style={styles.cardMain}>
+                    <Text style={styles.name} numberOfLines={2}>
+                        {item.name}
+                    </Text>
+                    <View style={styles.metaRow}>
+                        {item.location?.address ? (
+                            <Text style={styles.address} numberOfLines={1}>
+                                {item.location.address}
+                            </Text>
+                        ) : (
+                            <View style={styles.addressSpacer} />
+                        )}
+                        {miles != null ? (
+                            <Text style={styles.distance}>{formatDistance(miles)}</Text>
+                        ) : null}
+                    </View>
                 </View>
-                {item.description ? (
-                    <Text style={styles.description} numberOfLines={2}>
-                        {item.description}
-                    </Text>
-                ) : null}
-                {item.location?.address ? (
-                    <Text style={styles.address} numberOfLines={1}>
-                        {item.location.address}
-                    </Text>
+                {item.userAverageRating != null ? (
+                    <View style={styles.cardRating}>
+                        <RatingImage
+                            rating={item.userAverageRating}
+                            ratingInfo={ratingInfo}
+                            size={56}
+                        />
+                    </View>
                 ) : null}
             </Pressable>
         );
-    }, [coords, navigation]);
+    }, [coords, navigation, ratingInfo]);
 
     if (loading && !refreshing && restaurants.length === 0) {
         return <LoadingView message="Loading restaurants..." />;
@@ -311,39 +350,54 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8faf8',
     },
     card: {
+        flexDirection: 'row',
+        alignItems: 'stretch',
+        gap: 10,
         backgroundColor: '#fff',
         borderRadius: 12,
-        padding: 16,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
         marginBottom: 12,
         borderWidth: 1,
         borderColor: '#e5e7eb',
     },
-    cardHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        gap: 12,
+    cardMain: {
+        flex: 1,
+        minWidth: 0,
+        justifyContent: 'center',
+        gap: 4,
+    },
+    cardRating: {
+        width: 56,
+        alignSelf: 'stretch',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexShrink: 0,
     },
     name: {
-        flex: 1,
         fontSize: 18,
         fontWeight: '700',
         color: '#111827',
     },
-    distance: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: colors.primary,
-    },
-    description: {
-        marginTop: 6,
-        color: '#4b5563',
-        fontSize: 14,
+    metaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        minHeight: 18,
     },
     address: {
-        marginTop: 6,
-        color: '#6b7280',
+        flex: 1,
         fontSize: 13,
+        color: '#6b7280',
+    },
+    addressSpacer: {
+        flex: 1,
+    },
+    distance: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: colors.primary,
+        flexShrink: 0,
     },
     empty: {
         textAlign: 'center',

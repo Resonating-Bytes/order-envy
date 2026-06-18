@@ -42,6 +42,41 @@ describe('API v1 restaurants', () => {
             expect(res.body.restaurants).toHaveLength(1);
             expect(res.body.restaurants[0].name).toBe('Taco Palace');
         });
+
+        it('includes userAverageRating for authenticated users', async () => {
+            const restaurantRes = await request(app)
+                .post('/api/v1/restaurants')
+                .set(bearerHeader(auth.accessToken))
+                .send({ name: 'Rated Cafe' });
+
+            const restaurantId = restaurantRes.body.restaurant._id;
+
+            const menuItemRes = await request(app)
+                .post(`/api/v1/restaurants/${restaurantId}/menu-items`)
+                .set(bearerHeader(auth.accessToken))
+                .send({
+                    name: 'Soup',
+                    category: 'Entree',
+                });
+
+            await request(app)
+                .post(`/api/v1/restaurants/${restaurantId}/checkin`)
+                .set(bearerHeader(auth.accessToken))
+                .send({
+                    [menuItemRes.body.menuItem._id]: {
+                        checked: true,
+                        rating: 5,
+                        comment: 'Great soup',
+                    },
+                });
+
+            const res = await request(app)
+                .get('/api/v1/restaurants')
+                .set(bearerHeader(auth.accessToken));
+
+            expect(res.status).toBe(200);
+            expect(res.body.restaurants[0].userAverageRating).toBe(5);
+        });
     });
 
     describe('POST /api/v1/restaurants', () => {
