@@ -12,7 +12,7 @@ export function AuthProvider({ children }) {
         const tokens = await getStoredTokens();
         if (!tokens) {
             setUser(null);
-            return;
+            return null;
         }
 
         const storedUser = await getStoredUser();
@@ -21,13 +21,15 @@ export function AuthProvider({ children }) {
         try {
             const profile = await fetchCurrentUser();
             setUser(profile.user);
-            const tokens = await getStoredTokens();
-            if (tokens) {
-                await saveSession({ ...tokens, user: profile.user });
+            const latestTokens = await getStoredTokens();
+            if (latestTokens) {
+                await saveSession({ ...latestTokens, user: profile.user });
             }
+            return profile.user;
         } catch (err) {
             await clearSession();
             setUser(null);
+            return null;
         }
     }, []);
 

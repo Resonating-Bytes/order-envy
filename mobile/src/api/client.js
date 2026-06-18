@@ -2,10 +2,11 @@ import { API_BASE_URL } from '../config';
 import { clearSession, getStoredTokens, saveSession } from '../storage/session';
 
 export class ApiError extends Error {
-    constructor(message, status) {
+    constructor(message, status, extras = {}) {
         super(message);
         this.name = 'ApiError';
         this.status = status;
+        Object.assign(this, extras);
     }
 }
 
@@ -67,7 +68,11 @@ export async function apiFetch(path, options = {}, retry = true) {
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-        throw new ApiError(data.error || response.statusText || 'Request failed', response.status);
+        throw new ApiError(
+            data.error || response.statusText || 'Request failed',
+            response.status,
+            data
+        );
     }
 
     return data;
@@ -196,6 +201,63 @@ export async function updateMenuItem(restaurantId, menuItemId, data) {
 
 export async function deleteMenuItem(restaurantId, menuItemId) {
     return apiFetch(`/restaurants/${restaurantId}/menu-items/${menuItemId}`, {
+        method: 'DELETE',
+    });
+}
+
+export async function fetchFriendRequests() {
+    return apiFetch('/friends/requests');
+}
+
+export async function requestFriend(body) {
+    return apiFetch('/friends/request', {
+        method: 'POST',
+        body: JSON.stringify(body),
+    });
+}
+
+export async function inviteFriend(email) {
+    return apiFetch('/friends/invite', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+    });
+}
+
+export async function confirmFriend(token) {
+    return apiFetch(`/friends/confirm/${token}`, {
+        method: 'POST',
+    });
+}
+
+export async function declineFriend(token) {
+    return apiFetch(`/friends/decline/${token}`, {
+        method: 'DELETE',
+    });
+}
+
+export async function removeFriend(friendId) {
+    return apiFetch(`/friends/${friendId}`, {
+        method: 'DELETE',
+    });
+}
+
+export async function fetchRecommendations() {
+    return apiFetch('/recommendations');
+}
+
+export async function createRecommendation({ friendId, restaurantId, menuItemId }) {
+    return apiFetch('/recommendations', {
+        method: 'POST',
+        body: JSON.stringify({
+            friendId,
+            restaurantId,
+            menuItemId,
+        }),
+    });
+}
+
+export async function deleteRecommendation(recommendationId) {
+    return apiFetch(`/recommendations/${recommendationId}`, {
         method: 'DELETE',
     });
 }
