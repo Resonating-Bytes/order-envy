@@ -9,6 +9,7 @@ import {
     View,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { colors } from '../theme/colors';
 
 export default function LoginScreen() {
     const { login } = useAuth();
@@ -74,7 +75,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f0f4f1',
+        backgroundColor: '#f0f7ff',
         justifyContent: 'center',
         padding: 24,
     },
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         fontWeight: '700',
-        color: '#1b4332',
+        color: colors.primaryDarker,
     },
     subtitle: {
         fontSize: 14,
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
     },
     button: {
         marginTop: 8,
-        backgroundColor: '#2d6a4f',
+        backgroundColor: colors.primary,
         borderRadius: 10,
         paddingVertical: 14,
         alignItems: 'center',

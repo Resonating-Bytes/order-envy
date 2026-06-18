@@ -102,8 +102,19 @@ export async function logout() {
     await clearSession();
 }
 
-export async function fetchRestaurants() {
-    return apiFetch('/restaurants');
+export async function fetchRestaurants({ lat, long, filterDist } = {}) {
+    const params = new URLSearchParams();
+
+    if (filterDist === 'all') {
+        params.set('filterDist', 'all');
+    } else if (lat != null && long != null && filterDist != null) {
+        params.set('lat', String(lat));
+        params.set('long', String(long));
+        params.set('filterDist', String(filterDist));
+    }
+
+    const query = params.toString();
+    return apiFetch(`/restaurants${query ? `?${query}` : ''}`);
 }
 
 export async function fetchRestaurant(restaurantId) {
