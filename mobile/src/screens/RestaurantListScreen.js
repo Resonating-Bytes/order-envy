@@ -1,6 +1,5 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-    Animated,
     FlatList,
     Pressable,
     RefreshControl,
@@ -12,7 +11,9 @@ import { fetchRestaurants } from '../api/client';
 import DropdownPicker from '../components/DropdownPicker';
 import LoadingView from '../components/LoadingView';
 import LogoutHeaderButton from '../components/LogoutHeaderButton';
+import ScrollToTopButton from '../components/ScrollToTopButton';
 import ShrinkingScreenHeader, { getExpandedHeaderHeight } from '../components/ShrinkingScreenHeader';
+import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
 import { useAuth } from '../context/AuthContext';
 import {
     formatDistance,
@@ -98,7 +99,13 @@ const listHeaderStyles = StyleSheet.create({
 export default function RestaurantListScreen({ navigation }) {
     const { logout } = useAuth();
     const insets = useSafeAreaInsets();
-    const scrollY = useRef(new Animated.Value(0)).current;
+    const {
+        scrollY,
+        scrollRef,
+        onScroll,
+        scrollToTop,
+        showScrollToTop,
+    } = useAnimatedScreenScroll();
     const listTopPadding = getExpandedHeaderHeight(insets.top);
     const [restaurants, setRestaurants] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -197,11 +204,6 @@ export default function RestaurantListScreen({ navigation }) {
         setLoading(false);
     }, [locationStatus, loadRestaurants]);
 
-    const onScroll = Animated.event(
-        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-        { useNativeDriver: false },
-    );
-
     const renderListHeader = useCallback(() => (
         <ListFiltersHeader
             filterDist={filterDist}
@@ -253,39 +255,46 @@ export default function RestaurantListScreen({ navigation }) {
     }
 
     return (
-        <FlatList
-            style={styles.list}
-            data={displayedRestaurants}
-            keyExtractor={(item) => item._id}
-            renderItem={renderItem}
-            ListHeaderComponent={renderListHeader}
-            onScroll={onScroll}
-            scrollEventThrottle={16}
-            refreshControl={(
-                <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={handleRefresh}
-                    tintColor={colors.primary}
-                    progressViewOffset={listTopPadding}
-                />
-            )}
-            contentContainerStyle={
-                displayedRestaurants.length
-                    ? [styles.listContent, { paddingTop: listTopPadding }]
-                    : [styles.listEmpty, { paddingTop: listTopPadding }]
-            }
-            ListEmptyComponent={(
-                <Text style={styles.empty}>
-                    {locationStatus === 'active' && filterDist !== 'all'
-                        ? `No restaurants within ${filterDist} miles.`
-                        : 'No restaurants yet.'}
-                </Text>
-            )}
-        />
+        <View style={styles.screen}>
+            <FlatList
+                ref={scrollRef}
+                style={styles.list}
+                data={displayedRestaurants}
+                keyExtractor={(item) => item._id}
+                renderItem={renderItem}
+                ListHeaderComponent={renderListHeader}
+                onScroll={onScroll}
+                scrollEventThrottle={16}
+                refreshControl={(
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        tintColor={colors.primary}
+                        progressViewOffset={listTopPadding}
+                    />
+                )}
+                contentContainerStyle={
+                    displayedRestaurants.length
+                        ? [styles.listContent, { paddingTop: listTopPadding }]
+                        : [styles.listEmpty, { paddingTop: listTopPadding }]
+                }
+                ListEmptyComponent={(
+                    <Text style={styles.empty}>
+                        {locationStatus === 'active' && filterDist !== 'all'
+                            ? `No restaurants within ${filterDist} miles.`
+                            : 'No restaurants yet.'}
+                    </Text>
+                )}
+            />
+            <ScrollToTopButton visible={showScrollToTop} onPress={scrollToTop} />
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
+    screen: {
+        flex: 1,
+    },
     list: {
         flex: 1,
     },

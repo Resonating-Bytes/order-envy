@@ -1,44 +1,81 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
-    Animated,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     View,
 } from 'react-native';
-import { fetchRestaurant } from '../api/client';
+import { useFocusEffect } from '@react-navigation/native';
+import { fetchRatingMeta, fetchRestaurant } from '../api/client';
 import BackHeaderButton from '../components/BackHeaderButton';
 import LoadingView from '../components/LoadingView';
+import RatingImage from '../components/RatingImage';
+import ScrollToTopButton from '../components/ScrollToTopButton';
 import ShrinkingScreenHeader, { getExpandedHeaderHeight } from '../components/ShrinkingScreenHeader';
+import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
+import { useAuth } from '../context/AuthContext';
 import { formatDistance, getRestaurantDistance } from '../utils/distance';
 import { requestCurrentLocation } from '../utils/location';
+import { averageUserRating, getDisplayRestaurantRating } from '../utils/ratings';
 import { colors } from '../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function RestaurantDetailScreen({ route, navigation }) {
+    const { user } = useAuth();
     const { restaurantId, distanceMiles: passedDistanceMiles, restaurantName } = route.params;
     const insets = useSafeAreaInsets();
     const headerPadding = getExpandedHeaderHeight(insets.top);
-    const scrollY = useRef(new Animated.Value(0)).current;
+    const {
+        scrollY,
+        scrollRef,
+        onScroll,
+        scrollToTop,
+        showScrollToTop,
+    } = useAnimatedScreenScroll();
+    const hasLoadedRef = useRef(false);
     const [data, setData] = useState(null);
+    const [ratingInfo, setRatingInfo] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState('');
     const [coords, setCoords] = useState(null);
+    const userId = user?.id || user?._id;
 
-    const loadRestaurant = useCallback(async () => {
+    const loadRestaurant = useCallback(async ({ silent = false } = {}) => {
         setError('');
+        if (!silent) {
+            setLoading(true);
+        } else {
+            setRefreshing(true);
+        }
+
         try {
             const result = await fetchRestaurant(restaurantId);
             setData(result);
         } catch (err) {
             setError(err.message || 'Failed to load restaurant');
+        } finally {
+            if (!silent) {
+                setLoading(false);
+            } else {
+                setRefreshing(false);
+            }
         }
     }, [restaurantId]);
 
     React.useEffect(() => {
-        loadRestaurant().finally(() => setLoading(false));
-    }, [loadRestaurant]);
+        fetchRatingMeta()
+            .then((meta) => setRatingInfo(meta.ratingInfo || []))
+            .catch(() => setRatingInfo([]));
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadRestaurant({ silent: hasLoadedRef.current });
+            hasLoadedRef.current = true;
+        }, [loadRestaurant])
+    );
 
     React.useEffect(() => {
         if (passedDistanceMiles != null) return;
@@ -69,29 +106,21 @@ export default function RestaurantDetailScreen({ route, navigation }) {
         });
     }, [navigation, headerTitle, scrollY]);
 
-    const onScroll = Animated.event(
-        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-        { useNativeDriver: false },
-    );
-
     const distanceMiles = useMemo(() => {
         if (passedDistanceMiles != null) return passedDistanceMiles;
         if (!coords || !data?.restaurant) return null;
         return getRestaurantDistance(data.restaurant, coords.lat, coords.long);
     }, [passedDistanceMiles, coords, data?.restaurant]);
 
-    if (loading) {
+    if (loading && !refreshing && !data) {
         return <LoadingView message="Loading restaurant..." />;
     }
 
-    if (error || !data) {
+    if ((error || !data) && !refreshing) {
         return (
             <View style={styles.centered}>
                 <Text style={styles.error}>{error || 'Restaurant not found'}</Text>
-                <Pressable style={styles.retryButton} onPress={() => {
-                    setLoading(true);
-                    loadRestaurant().finally(() => setLoading(false));
-                }}>
+                <Pressable style={styles.retryButton} onPress={() => loadRestaurant()}>
                     <Text style={styles.retryText}>Retry</Text>
                 </Pressable>
             </View>
@@ -99,16 +128,23 @@ export default function RestaurantDetailScreen({ route, navigation }) {
     }
 
     const { restaurant, categories, userAverageRating } = data;
+    const displayRating = getDisplayRestaurantRating({
+        userAverageRating,
+        categories,
+        userId,
+    });
     const hasAddress = Boolean(restaurant.location?.address);
     const hasDistance = distanceMiles != null;
 
     return (
-        <ScrollView
-            style={styles.container}
-            contentContainerStyle={[styles.content, { paddingTop: headerPadding }]}
-            onScroll={onScroll}
-            scrollEventThrottle={16}
-        >
+        <View style={styles.screen}>
+            <ScrollView
+                ref={scrollRef}
+                style={styles.container}
+                contentContainerStyle={[styles.content, { paddingTop: headerPadding }]}
+                onScroll={onScroll}
+                scrollEventThrottle={16}
+            >
             {restaurant.description ? (
                 <Text style={styles.description}>{restaurant.description}</Text>
             ) : null}
@@ -126,8 +162,15 @@ export default function RestaurantDetailScreen({ route, navigation }) {
                     ) : null}
                 </View>
             ) : null}
-            {userAverageRating ? (
-                <Text style={styles.rating}>Your average rating: {userAverageRating}/5</Text>
+            {displayRating ? (
+                <View style={styles.ratingRow}>
+                    <Text style={styles.ratingLabel}>{displayRating.label}</Text>
+                    <RatingImage
+                        rating={displayRating.rating}
+                        ratingInfo={ratingInfo}
+                        size={56}
+                    />
+                </View>
             ) : null}
 
             <Pressable
@@ -143,21 +186,41 @@ export default function RestaurantDetailScreen({ route, navigation }) {
             {categories.map((category) => (
                 <View key={category.label} style={styles.section}>
                     <Text style={styles.sectionTitle}>{category.label}</Text>
-                    {category.menuItems.map((item) => (
-                        <View key={item._id} style={styles.menuItem}>
-                            <Text style={styles.menuItemName}>{item.name}</Text>
-                            {item.description ? (
-                                <Text style={styles.menuItemDescription}>{item.description}</Text>
-                            ) : null}
-                        </View>
-                    ))}
+                    {category.menuItems.map((item) => {
+                        const itemRating = averageUserRating(item.ratings, userId);
+
+                        return (
+                            <View key={item._id} style={styles.menuItem}>
+                                <View style={styles.menuItemHeader}>
+                                    <View style={styles.menuItemText}>
+                                        <Text style={styles.menuItemName}>{item.name}</Text>
+                                        {item.description ? (
+                                            <Text style={styles.menuItemDescription}>{item.description}</Text>
+                                        ) : null}
+                                    </View>
+                                    {itemRating ? (
+                                        <RatingImage
+                                            rating={itemRating}
+                                            ratingInfo={ratingInfo}
+                                            size={44}
+                                        />
+                                    ) : null}
+                                </View>
+                            </View>
+                        );
+                    })}
                 </View>
             ))}
-        </ScrollView>
+            </ScrollView>
+            <ScrollToTopButton visible={showScrollToTop} onPress={scrollToTop} />
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
+    screen: {
+        flex: 1,
+    },
     container: {
         flex: 1,
         backgroundColor: '#f8faf8',
@@ -197,8 +260,14 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: colors.primary,
     },
-    rating: {
-        marginTop: 10,
+    ratingRow: {
+        marginTop: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    ratingLabel: {
         fontSize: 14,
         fontWeight: '600',
         color: colors.primary,
@@ -232,6 +301,14 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         borderWidth: 1,
         borderColor: '#e5e7eb',
+    },
+    menuItemHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    menuItemText: {
+        flex: 1,
     },
     menuItemName: {
         fontSize: 15,

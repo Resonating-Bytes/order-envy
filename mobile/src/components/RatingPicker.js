@@ -1,37 +1,39 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-
-const RATING_LABELS = {
-    1: 'Awful',
-    2: 'Poor',
-    3: 'Okay',
-    4: 'Good',
-    5: 'Amazing',
-};
-
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { colors } from '../theme/colors';
+import {
+    getRatingImageSource,
+    getRatingInfo,
+    getRatingOptions,
+} from '../utils/ratings';
 
 export default function RatingPicker({ value, onChange, ratingInfo = [] }) {
-    const options = ratingInfo.length
-        ? ratingInfo
-        : [1, 2, 3, 4, 5].map((rating) => ({ value: rating, title: RATING_LABELS[rating] }));
+    const options = getRatingOptions(ratingInfo);
 
     return (
         <View style={styles.row}>
             {options.map((option) => {
                 const selected = value === option.value;
+                const info = getRatingInfo(ratingInfo, option.value);
+
                 return (
                     <Pressable
                         key={option.value}
                         onPress={() => onChange(option.value)}
+                        accessibilityRole="button"
+                        accessibilityLabel={info.title}
+                        accessibilityState={{ selected }}
                         style={[styles.button, selected && styles.buttonSelected]}
                     >
-                        <Text style={[styles.value, selected && styles.valueSelected]}>
-                            {option.value}
-                        </Text>
-                        <Text style={[styles.label, selected && styles.labelSelected]} numberOfLines={2}>
-                            {option.title || option.alt}
-                        </Text>
+                        <Image
+                            source={getRatingImageSource(option.value)}
+                            style={[
+                                styles.image,
+                                selected ? styles.imageSelected : styles.imageUnselected,
+                            ]}
+                            resizeMode="contain"
+                            accessibilityIgnoresInvertColors
+                        />
                     </Pressable>
                 );
             })}
@@ -42,38 +44,31 @@ export default function RatingPicker({ value, onChange, ratingInfo = [] }) {
 const styles = StyleSheet.create({
     row: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
+        justifyContent: 'space-between',
+        gap: 4,
     },
     button: {
-        minWidth: 58,
-        paddingVertical: 8,
-        paddingHorizontal: 6,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: '#d1d5db',
-        backgroundColor: '#fff',
+        flex: 1,
         alignItems: 'center',
+        paddingVertical: 6,
+        paddingHorizontal: 2,
+        borderRadius: 10,
+        borderWidth: 2,
+        borderColor: 'transparent',
+        backgroundColor: '#fff',
     },
     buttonSelected: {
         borderColor: colors.primary,
         backgroundColor: colors.primaryLight,
     },
-    value: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#374151',
+    image: {
+        width: 44,
+        height: 44,
     },
-    valueSelected: {
-        color: colors.primaryDarker,
+    imageUnselected: {
+        opacity: 0.5,
     },
-    label: {
-        marginTop: 2,
-        fontSize: 10,
-        color: '#6b7280',
-        textAlign: 'center',
-    },
-    labelSelected: {
-        color: colors.primaryDarker,
+    imageSelected: {
+        opacity: 1,
     },
 });
