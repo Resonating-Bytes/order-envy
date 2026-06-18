@@ -1,17 +1,20 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { headerButton } from '../theme/header';
 
 export const headerIconButtonStyles = StyleSheet.create({
     button: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#e5e7eb',
+        width: headerButton.size,
+        height: headerButton.size,
+        borderRadius: headerButton.radius,
+        backgroundColor: headerButton.backgroundColor,
+        borderWidth: headerButton.borderWidth,
+        borderColor: headerButton.borderColor,
         overflow: 'hidden',
     },
     iconFrame: {
-        width: 36,
-        height: 36,
+        width: headerButton.size,
+        height: headerButton.size,
         alignItems: 'center',
         justifyContent: 'center',
     },

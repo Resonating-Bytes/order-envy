@@ -11,10 +11,11 @@ import { fetchRestaurants, fetchRatingMeta } from '../api/client';
 import DropdownPicker from '../components/DropdownPicker';
 import LoadingView from '../components/LoadingView';
 import LogoutHeaderButton from '../components/LogoutHeaderButton';
+import AddHeaderButton from '../components/AddHeaderButton';
 import RatingImage from '../components/RatingImage';
 import ScrollToTopButton from '../components/ScrollToTopButton';
-import ShrinkingScreenHeader, { getExpandedHeaderHeight } from '../components/ShrinkingScreenHeader';
 import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
+import useShrinkingScreenHeader from '../hooks/useShrinkingScreenHeader';
 import { useAuth } from '../context/AuthContext';
 import {
     formatDistance,
@@ -28,7 +29,6 @@ import {
     listIncludesUserRatings,
 } from '../utils/restaurantList';
 import { colors } from '../theme/colors';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const RADIUS_OPTIONS = [
     { id: 25, label: '25 miles' },
@@ -105,7 +105,6 @@ const listHeaderStyles = StyleSheet.create({
 export default function RestaurantListScreen({ navigation }) {
     const { logout, user } = useAuth();
     const userId = user?.id || user?._id;
-    const insets = useSafeAreaInsets();
     const {
         scrollY,
         scrollRef,
@@ -113,7 +112,21 @@ export default function RestaurantListScreen({ navigation }) {
         scrollToTop,
         showScrollToTop,
     } = useAnimatedScreenScroll();
-    const listTopPadding = getExpandedHeaderHeight(insets.top);
+
+    const headerRightAction = React.useMemo(() => (
+        <View style={styles.headerActions}>
+            <AddHeaderButton
+                onPress={() => navigation.navigate('RestaurantForm', { mode: 'create' })}
+            />
+            <LogoutHeaderButton onPress={logout} />
+        </View>
+    ), [navigation, logout]);
+
+    const headerPadding = useShrinkingScreenHeader(navigation, {
+        title: 'Restaurants',
+        scrollY,
+        rightAction: headerRightAction,
+    });
     const [restaurants, setRestaurants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -192,21 +205,6 @@ export default function RestaurantListScreen({ navigation }) {
             .then((meta) => setRatingInfo(meta.ratingInfo || []))
             .catch(() => setRatingInfo([]));
     }, []);
-
-    React.useLayoutEffect(() => {
-        navigation.setOptions({
-            headerTransparent: true,
-            headerShadowVisible: false,
-            headerTitle: '',
-            header: () => (
-                <ShrinkingScreenHeader
-                    scrollY={scrollY}
-                    title="Restaurants"
-                    rightAction={<LogoutHeaderButton onPress={logout} />}
-                />
-            ),
-        });
-    }, [navigation, logout, scrollY]);
 
     React.useEffect(() => {
         if (sortBy === 'distance' && !coords) {
@@ -309,13 +307,13 @@ export default function RestaurantListScreen({ navigation }) {
                         refreshing={refreshing}
                         onRefresh={handleRefresh}
                         tintColor={colors.primary}
-                        progressViewOffset={listTopPadding}
+                        progressViewOffset={headerPadding}
                     />
                 )}
                 contentContainerStyle={
                     displayedRestaurants.length
-                        ? [styles.listContent, { paddingTop: listTopPadding }]
-                        : [styles.listEmpty, { paddingTop: listTopPadding }]
+                        ? [styles.listContent, { paddingTop: headerPadding }]
+                        : [styles.listEmpty, { paddingTop: headerPadding }]
                 }
                 ListEmptyComponent={(
                     <Text style={styles.empty}>
@@ -333,6 +331,11 @@ export default function RestaurantListScreen({ navigation }) {
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
+    },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
     },
     list: {
         flex: 1,

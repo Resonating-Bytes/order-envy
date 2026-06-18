@@ -17,16 +17,25 @@ import LoadingView from '../components/LoadingView';
 import RatingPicker from '../components/RatingPicker';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
+import useShrinkingScreenHeader, { useHeaderBackButton } from '../hooks/useShrinkingScreenHeader';
 import { colors } from '../theme/colors';
 
 export default function CheckInScreen({ route, navigation }) {
-    const { restaurantId, restaurantName } = route.params;
+    const { restaurantId, restaurantName, focusMenuItemId } = route.params;
+    const headerTitle = focusMenuItemId ? 'Add rating' : 'Check in';
+    const backButton = useHeaderBackButton(navigation);
     const {
+        scrollY,
         scrollRef,
         onScroll,
         scrollToTop,
         showScrollToTop,
     } = useAnimatedScreenScroll();
+    const headerPadding = useShrinkingScreenHeader(navigation, {
+        title: headerTitle,
+        scrollY,
+        leftAction: backButton,
+    });
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -50,8 +59,9 @@ export default function CheckInScreen({ route, navigation }) {
             const initialMenuState = {};
             (checkinData.categories || []).forEach((category) => {
                 category.menuItems.forEach((item) => {
+                    const isFocused = focusMenuItemId && item._id === focusMenuItemId;
                     initialMenuState[item._id] = {
-                        checked: false,
+                        checked: !!isFocused,
                         rating: null,
                         comment: '',
                     };
@@ -61,7 +71,7 @@ export default function CheckInScreen({ route, navigation }) {
         } catch (err) {
             setError(err.message || 'Failed to load check-in form');
         }
-    }, [restaurantId]);
+    }, [restaurantId, focusMenuItemId]);
 
     React.useEffect(() => {
         loadData().finally(() => setLoading(false));
@@ -71,6 +81,26 @@ export default function CheckInScreen({ route, navigation }) {
         () => Object.values(menuState).filter((entry) => entry.checked).length,
         [menuState]
     );
+
+    const displayCategories = useMemo(() => {
+        if (!focusMenuItemId) return categories;
+
+        return categories
+            .map((category) => ({
+                ...category,
+                menuItems: category.menuItems.filter((item) => item._id === focusMenuItemId),
+            }))
+            .filter((category) => category.menuItems.length > 0);
+    }, [categories, focusMenuItemId]);
+
+    const focusedItemName = useMemo(() => {
+        if (!focusMenuItemId) return null;
+        for (const category of categories) {
+            const item = category.menuItems.find((entry) => entry._id === focusMenuItemId);
+            if (item) return item.name;
+        }
+        return null;
+    }, [categories, focusMenuItemId]);
 
     function updateMenuItem(menuItemId, patch) {
         setMenuState((current) => ({
@@ -87,26 +117,40 @@ export default function CheckInScreen({ route, navigation }) {
         setSuccess('');
 
         const body = {};
-        if (restaurantRating) {
-            body[restaurantId] = {
-                rating: restaurantRating,
-                comment: restaurantComment.trim(),
-            };
-        }
 
-        Object.entries(menuState).forEach(([menuItemId, entry]) => {
-            if (entry.checked && entry.rating) {
-                body[menuItemId] = {
-                    checked: true,
-                    rating: entry.rating,
-                    comment: entry.comment.trim(),
+        if (focusMenuItemId) {
+            const entry = menuState[focusMenuItemId];
+            if (!entry?.rating) {
+                setError('Select a rating before submitting.');
+                return;
+            }
+            body[focusMenuItemId] = {
+                checked: true,
+                rating: entry.rating,
+                comment: entry.comment.trim(),
+            };
+        } else {
+            if (restaurantRating) {
+                body[restaurantId] = {
+                    rating: restaurantRating,
+                    comment: restaurantComment.trim(),
                 };
             }
-        });
 
-        if (!Object.keys(body).length) {
-            setError('Rate the restaurant or at least one menu item before submitting.');
-            return;
+            Object.entries(menuState).forEach(([menuItemId, entry]) => {
+                if (entry.checked && entry.rating) {
+                    body[menuItemId] = {
+                        checked: true,
+                        rating: entry.rating,
+                        comment: entry.comment.trim(),
+                    };
+                }
+            });
+
+            if (!Object.keys(body).length) {
+                setError('Rate the restaurant or at least one menu item before submitting.');
+                return;
+            }
         }
 
         setSubmitting(true);
@@ -130,14 +174,20 @@ export default function CheckInScreen({ route, navigation }) {
             <ScrollView
                 ref={scrollRef}
                 style={styles.container}
-                contentContainerStyle={styles.content}
-                contentInsetAdjustmentBehavior="automatic"
+                contentContainerStyle={[styles.content, { paddingTop: headerPadding }]}
                 onScroll={onScroll}
                 scrollEventThrottle={16}
             >
-            <Text style={styles.title}>{restaurantName}</Text>
-            <Text style={styles.subtitle}>What did you have? Rate your visit.</Text>
+            <Text style={styles.title}>
+                {focusMenuItemId ? (focusedItemName || 'Menu item') : restaurantName}
+            </Text>
+            <Text style={styles.subtitle}>
+                {focusMenuItemId
+                    ? 'How was this dish? Add your rating.'
+                    : 'What did you have? Rate your visit.'}
+            </Text>
 
+            {!focusMenuItemId ? (
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Overall restaurant</Text>
                 <RatingPicker
@@ -153,27 +203,32 @@ export default function CheckInScreen({ route, navigation }) {
                     multiline
                 />
             </View>
+            ) : null}
 
-            {categories.map((category) => (
+            {displayCategories.map((category) => (
                 <View key={category.label} style={styles.section}>
-                    <Text style={styles.sectionTitle}>{category.label}</Text>
+                    {!focusMenuItemId ? (
+                        <Text style={styles.sectionTitle}>{category.label}</Text>
+                    ) : null}
                     {category.menuItems.map((item) => {
                         const entry = menuState[item._id] || { checked: false, rating: null, comment: '' };
                         return (
                             <View key={item._id} style={styles.menuCard}>
-                                <View style={styles.menuHeader}>
-                                    <Text style={styles.menuName}>{item.name}</Text>
-                                    <Switch
-                                        value={entry.checked}
-                                        onValueChange={(checked) => updateMenuItem(item._id, {
-                                            checked,
-                                            rating: checked ? entry.rating : null,
-                                        })}
-                                        trackColor={{ true: colors.primaryMuted, false: '#d1d5db' }}
-                                        thumbColor={entry.checked ? colors.primary : '#f4f4f5'}
-                                    />
-                                </View>
-                                {entry.checked ? (
+                                {!focusMenuItemId ? (
+                                    <View style={styles.menuHeader}>
+                                        <Text style={styles.menuName}>{item.name}</Text>
+                                        <Switch
+                                            value={entry.checked}
+                                            onValueChange={(checked) => updateMenuItem(item._id, {
+                                                checked,
+                                                rating: checked ? entry.rating : null,
+                                            })}
+                                            trackColor={{ true: colors.primaryMuted, false: '#d1d5db' }}
+                                            thumbColor={entry.checked ? colors.primary : '#f4f4f5'}
+                                        />
+                                    </View>
+                                ) : null}
+                                {(focusMenuItemId || entry.checked) ? (
                                     <>
                                         <RatingPicker
                                             value={entry.rating}
@@ -204,7 +259,11 @@ export default function CheckInScreen({ route, navigation }) {
                 disabled={submitting}
             >
                 <Text style={styles.submitButtonText}>
-                    {submitting ? 'Saving...' : `Submit check-in (${selectedMenuCount} items)`}
+                    {submitting
+                        ? 'Saving...'
+                        : focusMenuItemId
+                            ? 'Save rating'
+                            : `Submit check-in (${selectedMenuCount} items)`}
                 </Text>
             </Pressable>
             </ScrollView>
