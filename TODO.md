@@ -1,7 +1,8 @@
 # Order Envy — TODO
 
 ## Auth
-- [ ] Sign in with Google / Apple — OAuth login and account creation (mobile + API)
+- [x] Sign in with Google — OAuth login and account creation (mobile + API)
+- [ ] Sign in with Apple — OAuth login and account creation (mobile + API)
 
 ## Mobile (planned)
 - [x] Merge/deploy list `userAverageRating` API (sort by rating without N+1 detail fetches)

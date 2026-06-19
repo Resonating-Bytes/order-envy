@@ -2,6 +2,8 @@
   "expo": {
     "name": "Order Envy",
     "slug": "order-envy",
+    "owner": "resonating-bytes",
+    "scheme": "orderenvy",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -27,7 +29,8 @@
         {
           "locationWhenInUsePermission": "Order Envy uses your location to show nearby restaurants."
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }

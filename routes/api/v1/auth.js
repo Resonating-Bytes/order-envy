@@ -25,6 +25,11 @@ router.post('/login', asyncHandler(async (req, res) => {
     sendJson(res, 200, result);
 }));
 
+router.post('/google', asyncHandler(async (req, res) => {
+    const result = await authService.loginWithGoogle(req.body);
+    sendJson(res, 200, result);
+}));
+
 router.post('/refresh', asyncHandler(async (req, res) => {
     const result = await authService.refresh(req.body.refreshToken);
     sendJson(res, 200, result);

@@ -8,16 +8,106 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 import { useAuth } from '../context/AuthContext';
+import {
+    GOOGLE_ANDROID_CLIENT_ID,
+    GOOGLE_IOS_CLIENT_ID,
+    GOOGLE_OAUTH_REDIRECT_URI,
+    GOOGLE_WEB_CLIENT_ID,
+    isGoogleSignInConfigured,
+} from '../config';
+import { isExpoGo, promptGoogleViaExpoProxy } from '../lib/googleSignIn';
 import { colors } from '../theme/colors';
 
+WebBrowser.maybeCompleteAuthSession();
+
+function getGoogleRedirectUri(request) {
+    return request?.redirectUri || GOOGLE_OAUTH_REDIRECT_URI;
+}
+
+function getGoogleAuthPayload(response, request) {
+    if (!response || response.type !== 'success') {
+        return null;
+    }
+
+    const idToken = response.params?.id_token || response.authentication?.idToken;
+    if (idToken) {
+        return { idToken };
+    }
+
+    if (response.params?.code) {
+        return {
+            code: response.params.code,
+            redirectUri: getGoogleRedirectUri(request),
+            codeVerifier: request?.codeVerifier,
+        };
+    }
+
+    return null;
+}
+
+function shouldUseExpoProxy() {
+    if (!isExpoGo()) {
+        return false;
+    }
+    // Platform OAuth clients redirect directly to the app without the auth.expo.io proxy.
+    if (Platform.OS === 'ios' && GOOGLE_IOS_CLIENT_ID) {
+        return false;
+    }
+    if (Platform.OS === 'android' && GOOGLE_ANDROID_CLIENT_ID) {
+        return false;
+    }
+    return true;
+}
+
 export default function LoginScreen() {
-    const { login } = useAuth();
+    const { login, loginWithGoogle } = useAuth();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
 
+    const [googleRequest, , promptGoogleSignIn] = Google.useIdTokenAuthRequest({
+        iosClientId: GOOGLE_IOS_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
+        androidClientId: GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
+        webClientId: GOOGLE_WEB_CLIENT_ID,
+        redirectUri: GOOGLE_OAUTH_REDIRECT_URI,
+        selectAccount: true,
+    });
+
+    async function handleGooglePress() {
+        setError('');
+        setGoogleLoading(true);
+        try {
+            const response = shouldUseExpoProxy()
+                ? await promptGoogleViaExpoProxy(googleRequest)
+                : await promptGoogleSignIn();
+
+            if (response?.type !== 'success') {
+                if (response?.type === 'error') {
+                    setError(response.error?.message || 'Google sign-in failed');
+                }
+                return;
+            }
+
+            const payload = getGoogleAuthPayload(response, googleRequest);
+            if (!payload) {
+                setError('Google sign-in did not return a token');
+                return;
+            }
+
+            await loginWithGoogle(payload);
+        } catch (err) {
+            const detail = err.status ? ` (${err.status})` : '';
+            setError(`${err.message || 'Google sign-in failed'}${detail}`);
+        } finally {
+            setGoogleLoading(false);
+        }
+    }
     async function handleLogin() {
         setError('');
         setSubmitting(true);
@@ -30,6 +120,9 @@ export default function LoginScreen() {
         }
     }
 
+    const busy = submitting || googleLoading;
+    const googleEnabled = isGoogleSignInConfigured && !!googleRequest;
+
     return (
         <KeyboardAvoidingView
             style={styles.container}
@@ -38,6 +131,21 @@ export default function LoginScreen() {
             <View style={styles.card}>
                 <Text style={styles.title}>Order Envy</Text>
                 <Text style={styles.subtitle}>Track what you've had and what to try next</Text>
+
+                {googleEnabled ? (
+                    <>
+                        <GoogleSignInButton
+                            onPress={handleGooglePress}
+                            loading={googleLoading}
+                            disabled={submitting}
+                        />
+                        <View style={styles.dividerRow}>
+                            <View style={styles.dividerLine} />
+                            <Text style={styles.dividerText}>or</Text>
+                            <View style={styles.dividerLine} />
+                        </View>
+                    </>
+                ) : null}
 
                 <TextInput
                     style={styles.input}
@@ -59,12 +167,12 @@ export default function LoginScreen() {
                 {error ? <Text style={styles.error}>{error}</Text> : null}
 
                 <Pressable
-                    style={[styles.button, submitting && styles.buttonDisabled]}
+                    style={[styles.button, busy && styles.buttonDisabled]}
                     onPress={handleLogin}
-                    disabled={submitting || !username || !password}
+                    disabled={busy || !username || !password}
                 >
                     <Text style={styles.buttonText}>
-                        {submitting ? 'Signing in...' : 'Sign in'}
+                        {busy ? 'Signing in...' : 'Sign in'}
                     </Text>
                 </Pressable>
             </View>
@@ -98,6 +206,22 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#6b7280',
         marginBottom: 8,
+    },
+    dividerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginVertical: 4,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: '#e5e7eb',
+    },
+    dividerText: {
+        color: '#9ca3af',
+        fontSize: 13,
+        fontWeight: '600',
     },
     input: {
         borderWidth: 1,
