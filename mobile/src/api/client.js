@@ -92,6 +92,24 @@ export async function login(username, password) {
     return data;
 }
 
+export async function loginWithGoogle(payload) {
+    const response = await fetch(`${API_BASE_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        const message = data.error
+            || (response.status === 404
+                ? 'Google sign-in API is not deployed yet'
+                : `Google sign-in failed (${response.status})`);
+        throw new ApiError(message, response.status, data);
+    }
+    await saveSession(data);
+    return data;
+}
+
 export async function logout() {
     const tokens = await getStoredTokens();
     if (tokens?.refreshToken) {

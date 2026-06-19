@@ -4,6 +4,7 @@ const Friends = require('../models/friends');
 const RefreshToken = require('../models/refreshToken');
 const { signAccessToken, signRefreshToken, verifyToken } = require('../lib/jwt');
 const { formatUser } = require('../lib/apiHelpers');
+const { exchangeGoogleAuthCode, verifyGoogleIdToken } = require('../lib/googleAuth');
 const { generateToken, sendEmail, TokenType } = require('../utils/misc');
 
 function hashToken(token) {
@@ -147,6 +148,74 @@ async function login({ username, password }) {
     return issueTokens(populated);
 }
 
+async function loginWithGoogle({ idToken, id_token, code, redirectUri, codeVerifier }) {
+    let token = idToken || id_token;
+    if (!token && code) {
+        token = await exchangeGoogleAuthCode(code, redirectUri, codeVerifier);
+    }
+    if (!token) {
+        const err = new Error('Google ID token or authorization code required');
+        err.status = 400;
+        throw err;
+    }
+
+    const payload = await verifyGoogleIdToken(token);
+    const googleId = payload.sub;
+    const email = payload.email.toLowerCase();
+
+    let user = await User.findOne({ googleId });
+    if (user) {
+        const populated = await User.findById(user._id).populate('friends');
+        return { ...(await issueTokens(populated)), isNewUser: false };
+    }
+
+    user = await User.findOne({ username: email });
+    if (user) {
+        if (user.googleId && user.googleId !== googleId) {
+            const err = new Error('This email is linked to a different Google account');
+            err.status = 409;
+            throw err;
+        }
+
+        if (user.tokenType === TokenType.NEW_ACCOUNT) {
+            user.token = undefined;
+            user.tokenExpire = undefined;
+            user.tokenType = undefined;
+        }
+
+        user.googleId = googleId;
+        if (!user.firstName && payload.given_name) {
+            user.firstName = payload.given_name;
+        }
+        if (!user.lastName && payload.family_name) {
+            user.lastName = payload.family_name;
+        }
+        await user.save();
+
+        const populated = await User.findById(user._id).populate('friends');
+        return { ...(await issueTokens(populated)), isNewUser: false };
+    }
+
+    const newUser = new User({
+        username: email,
+        email,
+        firstName: payload.given_name || '',
+        lastName: payload.family_name || '',
+        googleId,
+        friends: [],
+    });
+
+    await new Promise((resolve, reject) => {
+        User.register(newUser, crypto.randomBytes(32).toString('hex'), (err, registeredUser) => {
+            if (err) return reject(err);
+            resolve(registeredUser);
+        });
+    });
+
+    const populated = await User.findById(newUser._id).populate('friends');
+    return { ...(await issueTokens(populated)), isNewUser: true };
+}
+
 async function refresh(refreshToken) {
     if (!refreshToken) {
         const err = new Error('Refresh token required');
@@ -257,6 +326,7 @@ module.exports = {
     register,
     confirmAccount,
     login,
+    loginWithGoogle,
     refresh,
     logout,
     forgotPassword,

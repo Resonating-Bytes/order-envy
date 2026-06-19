@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { fetchCurrentUser, login as apiLogin, logout as apiLogout } from '../api/client';
+import { fetchCurrentUser, login as apiLogin, loginWithGoogle as apiLoginWithGoogle, logout as apiLogout } from '../api/client';
 import { clearSession, getStoredTokens, getStoredUser, saveSession } from '../storage/session';
 
 const AuthContext = createContext(null);
@@ -43,6 +43,12 @@ export function AuthProvider({ children }) {
         return result;
     }, []);
 
+    const loginWithGoogle = useCallback(async (payload) => {
+        const result = await apiLoginWithGoogle(payload);
+        setUser(result.user);
+        return result;
+    }, []);
+
     const logout = useCallback(async () => {
         await apiLogout();
         setUser(null);
@@ -53,9 +59,10 @@ export function AuthProvider({ children }) {
         isLoading,
         isAuthenticated: !!user,
         login,
+        loginWithGoogle,
         logout,
         refreshUser: restoreSession,
-    }), [user, isLoading, login, logout, restoreSession]);
+    }), [user, isLoading, login, loginWithGoogle, logout, restoreSession]);
 
     return (
         <AuthContext.Provider value={value}>
