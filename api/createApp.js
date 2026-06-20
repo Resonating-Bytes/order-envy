@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { connectDB } = require('../lib/mongoose');
+const { getCompatibilityPayload } = require('../lib/compatibility');
 const apiV1Routes = require('../routes/api/v1');
 const apiErrorHandler = require('../middleware/apiErrorHandler');
 const optionalAuth = require('../middleware/optionalAuth');
@@ -23,8 +24,13 @@ function createApiApp() {
         res.json({ ok: true, version: 'v1' });
     };
 
+    const compatibilityHandler = (req, res) => {
+        res.json(getCompatibilityPayload());
+    };
+
     API_PREFIXES.forEach((prefix) => {
         app.get(`${prefix}/health`, healthHandler);
+        app.get(`${prefix}/meta/compatibility`, compatibilityHandler);
     });
 
     const apiRouter = express.Router();
