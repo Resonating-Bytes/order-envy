@@ -1,5 +1,6 @@
 import React from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { deleteRecommendation } from '../api/client';
 import { colors } from '../theme/colors';
 
@@ -63,14 +64,19 @@ export default function RecommendationsSection({
                                 menuItemName: item.menuItem?.name,
                             })}
                         >
-                            <Text style={styles.cardTitle} numberOfLines={2}>{label}</Text>
-                            {recommenderNames.length ? (
-                                <Text style={styles.cardMeta} numberOfLines={2}>
-                                    {`From: ${recommenderNames.join(', ')}`}
-                                </Text>
-                            ) : item.count > 1 ? (
-                                <Text style={styles.cardMeta}>{item.count} recommendations</Text>
-                            ) : null}
+                            <View style={styles.cardMain}>
+                                <Text style={styles.cardTitle} numberOfLines={2}>{label}</Text>
+                                {recommenderNames.length ? (
+                                    <Text style={styles.cardMeta} numberOfLines={2}>
+                                        {`From: ${recommenderNames.join(', ')}`}
+                                    </Text>
+                                ) : item.count > 1 ? (
+                                    <Text style={styles.cardMeta}>{item.count} recommendations</Text>
+                                ) : null}
+                            </View>
+                            <View style={styles.cardChevron}>
+                                <Ionicons name="chevron-forward" size={22} color={colors.textMuted} />
+                            </View>
                         </Pressable>
                         {!item.noDelete ? (
                             <Pressable
@@ -111,12 +117,22 @@ const styles = StyleSheet.create({
     },
     card: {
         flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
         backgroundColor: '#f8faf8',
         borderRadius: 10,
         borderWidth: 1,
         borderColor: colors.primary,
         paddingVertical: 10,
         paddingHorizontal: 12,
+    },
+    cardMain: {
+        flex: 1,
+        minWidth: 0,
+    },
+    cardChevron: {
+        flexShrink: 0,
     },
     cardTitle: {
         fontSize: 15,

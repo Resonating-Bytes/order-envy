@@ -13,6 +13,7 @@ import CheckInScreen from '../screens/CheckInScreen';
 import FriendsScreen from '../screens/FriendsScreen';
 import AddFriendScreen from '../screens/AddFriendScreen';
 import RecommendScreen from '../screens/RecommendScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 import { colors } from '../theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -72,6 +73,11 @@ function AppStack() {
             <Stack.Screen
                 name="Recommend"
                 component={RecommendScreen}
+                options={{ title: '' }}
+            />
+            <Stack.Screen
+                name="Settings"
+                component={SettingsScreen}
                 options={{ title: '' }}
             />
         </Stack.Navigator>

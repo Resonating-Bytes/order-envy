@@ -204,17 +204,6 @@ export default function RestaurantDetailScreen({ route, navigation }) {
                 <Text style={styles.checkinButtonText}>Check in</Text>
             </Pressable>
 
-            <Pressable
-                style={styles.addMenuItemButton}
-                onPress={() => navigation.navigate('MenuItemForm', {
-                    mode: 'create',
-                    restaurantId,
-                    restaurantName: restaurant.name,
-                })}
-            >
-                <Text style={styles.addMenuItemButtonText}>Add menu item</Text>
-            </Pressable>
-
             {(user?.id || user?._id) ? (
                 <Pressable
                     style={styles.recommendButton}
@@ -232,6 +221,17 @@ export default function RestaurantDetailScreen({ route, navigation }) {
                 onPressItem={() => {}}
                 onDeleted={() => loadRestaurant({ silent: true })}
             />
+
+            <Pressable
+                style={styles.addMenuItemButton}
+                onPress={() => navigation.navigate('MenuItemForm', {
+                    mode: 'create',
+                    restaurantId,
+                    restaurantName: restaurant.name,
+                })}
+            >
+                <Text style={styles.addMenuItemButtonText}>Add menu item</Text>
+            </Pressable>
 
             {categories.length === 0 ? (
                 <Text style={styles.emptyMenu}>No menu items yet.</Text>
@@ -358,6 +358,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     addMenuItemButton: {
+        marginTop: 12,
         marginBottom: 12,
         backgroundColor: '#fff',
         borderRadius: 12,

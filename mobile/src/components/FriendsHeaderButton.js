@@ -1,6 +1,7 @@
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import HeaderIconButton from './HeaderIconButton';
+import { headerButton } from '../theme/header';
 import { colors } from '../theme/colors';
 
 export default function FriendsHeaderButton({ onPress }) {
@@ -8,7 +9,7 @@ export default function FriendsHeaderButton({ onPress }) {
         <HeaderIconButton
             onPress={onPress}
             accessibilityLabel="Friends"
-            icon={<Ionicons name="people-outline" size={18} color={colors.primary} />}
+            icon={<Ionicons name="people-outline" size={headerButton.iconSize} color={colors.primary} />}
         />
     );
 }

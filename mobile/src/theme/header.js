@@ -5,4 +5,6 @@ export const headerButton = {
     borderWidth: 1,
     borderColor: '#9ca3af',
     iconColor: '#007bff',
+    // Ionicons size inside header icon bubbles
+    iconSize: 25,
 };

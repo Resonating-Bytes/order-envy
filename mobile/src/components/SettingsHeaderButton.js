@@ -4,16 +4,12 @@ import HeaderIconButton from './HeaderIconButton';
 import { headerButton } from '../theme/header';
 import { colors } from '../theme/colors';
 
-export function BackChevronIcon({ color = colors.primary, size = headerButton.iconSize }) {
-    return <Ionicons name="chevron-back" size={size} color={color} />;
-}
-
-export default function BackHeaderButton({ onPress }) {
+export default function SettingsHeaderButton({ onPress }) {
     return (
         <HeaderIconButton
             onPress={onPress}
-            accessibilityLabel="Go back"
-            icon={<BackChevronIcon />}
+            accessibilityLabel="Settings"
+            icon={<Ionicons name="settings-outline" size={headerButton.iconSize} color={colors.primary} />}
         />
     );
 }

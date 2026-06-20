@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { fetchCurrentUser, login as apiLogin, loginWithGoogle as apiLoginWithGoogle, logout as apiLogout } from '../api/client';
+import { fetchCurrentUser, login as apiLogin, loginWithGoogle as apiLoginWithGoogle, logout as apiLogout, updateUserProfile as apiUpdateUserProfile } from '../api/client';
 import { clearSession, getStoredTokens, getStoredUser, saveSession } from '../storage/session';
 
 const AuthContext = createContext(null);
@@ -54,6 +54,19 @@ export function AuthProvider({ children }) {
         setUser(null);
     }, []);
 
+    const updateProfile = useCallback(async (data) => {
+        if (!user?.id) {
+            throw new Error('Not signed in');
+        }
+        const result = await apiUpdateUserProfile(user.id, data);
+        setUser(result.user);
+        const tokens = await getStoredTokens();
+        if (tokens) {
+            await saveSession({ ...tokens, user: result.user });
+        }
+        return result.user;
+    }, [user?.id]);
+
     const value = useMemo(() => ({
         user,
         isLoading,
@@ -61,8 +74,9 @@ export function AuthProvider({ children }) {
         login,
         loginWithGoogle,
         logout,
+        updateProfile,
         refreshUser: restoreSession,
-    }), [user, isLoading, login, loginWithGoogle, logout, restoreSession]);
+    }), [user, isLoading, login, loginWithGoogle, logout, updateProfile, restoreSession]);
 
     return (
         <AuthContext.Provider value={value}>
