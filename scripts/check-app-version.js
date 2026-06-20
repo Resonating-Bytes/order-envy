@@ -12,7 +12,8 @@ const APP_JSON = path.join(ROOT, 'mobile', 'app.json');
 const PACKAGE_JSON = path.join(ROOT, 'mobile', 'package.json');
 const CHANGELOG = path.join(ROOT, 'CHANGELOG.md');
 
-const APP_PATHS = [/^mobile\/src\//, /^mobile\/app\.json$/, /^mobile\/package\.json$/];
+/** Any mobile tree change requires a semver bump, except test-only edits. */
+const APP_PATHS = [/^mobile\//];
 const APP_EXEMPT = [/^mobile\/tests\//];
 
 function needsAppVersionBump(files) {

@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
 import useShrinkingScreenHeader, { useHeaderBackButton } from '../hooks/useShrinkingScreenHeader';
 import AppVersionSection from '../components/AppVersionSection';
+import OfflineStatusSection from '../components/OfflineStatusSection';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
 
@@ -169,6 +170,10 @@ export default function SettingsScreen({ navigation }) {
                 </View>
 
                 <AppVersionSection />
+
+                <View style={styles.section}>
+                    <OfflineStatusSection />
+                </View>
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Change password</Text>
