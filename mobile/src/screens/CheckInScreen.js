@@ -18,6 +18,7 @@ import RatingPicker from '../components/RatingPicker';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
 import useShrinkingScreenHeader, { useHeaderBackButton } from '../hooks/useShrinkingScreenHeader';
+import { notifyIfOfflineQueued } from '../utils/offlineFeedback';
 import { colors } from '../theme/colors';
 
 export default function CheckInScreen({ route, navigation }) {
@@ -156,7 +157,11 @@ export default function CheckInScreen({ route, navigation }) {
         setSubmitting(true);
         try {
             const result = await submitCheckin(restaurantId, body);
-            setSuccess(result.message || 'Check-in saved');
+            if (notifyIfOfflineQueued(result, 'Check-in')) {
+                setSuccess('Check-in queued — will sync when online');
+            } else {
+                setSuccess(result.message || 'Check-in saved');
+            }
             setTimeout(() => navigation.goBack(), 1200);
         } catch (err) {
             setError(err.message || 'Failed to submit check-in');

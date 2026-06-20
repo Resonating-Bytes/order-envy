@@ -20,6 +20,7 @@ import LoadingView from '../components/LoadingView';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
 import useShrinkingScreenHeader, { useHeaderBackButton } from '../hooks/useShrinkingScreenHeader';
+import { notifyIfOfflineQueued } from '../utils/offlineFeedback';
 import { colors } from '../theme/colors';
 
 const DEFAULT_CATEGORY = 'Entree';
@@ -119,10 +120,12 @@ export default function MenuItemFormScreen({ route, navigation }) {
         setSubmitting(true);
         try {
             if (isEdit) {
-                await updateMenuItem(restaurantId, menuItemId, payload);
+                const result = await updateMenuItem(restaurantId, menuItemId, payload);
+                notifyIfOfflineQueued(result, 'Menu item');
                 navigation.goBack();
             } else {
                 const result = await createMenuItem(restaurantId, payload);
+                notifyIfOfflineQueued(result, 'Menu item');
                 if (nextAction === 'rating') {
                     navigation.replace('CheckIn', {
                         restaurantId,
@@ -154,7 +157,8 @@ export default function MenuItemFormScreen({ route, navigation }) {
         setDeleting(true);
         setError('');
         try {
-            await deleteMenuItem(restaurantId, menuItemId);
+            const result = await deleteMenuItem(restaurantId, menuItemId);
+            notifyIfOfflineQueued(result, 'Delete');
             navigation.goBack();
         } catch (err) {
             setError(err.message || 'Failed to delete menu item');

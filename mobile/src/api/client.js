@@ -1,6 +1,19 @@
 import { API_BASE_URL } from '../config';
 import { clearSession, getStoredTokens, saveSession } from '../storage/session';
 import { assertRemoteWriteAllowed } from '../lib/compatibility';
+import { getIsOnline } from '../lib/network';
+import {
+    getLocalRestaurantResponse,
+    getLocalMenuItemResponse,
+    handleOfflineWrite,
+    isOfflineQueuedResult,
+} from '../lib/offlineWrites';
+import { isLocalId } from '../lib/offlineIds';
+import {
+    emitFetchMeta,
+    getCache,
+    setCache,
+} from '../storage/offlineStore';
 
 export class ApiError extends Error {
     constructor(message, status, extras = {}) {
@@ -19,6 +32,19 @@ function isWriteMethod(method) {
 
 function isAuthPath(path) {
     return path.startsWith('/auth/');
+}
+
+function isNetworkFailure(err) {
+    if (!err) return false;
+    if (err.name === 'TypeError') return true;
+    return /network request failed|failed to fetch|network error/i.test(err.message || '');
+}
+
+async function readCachedGet(path) {
+    const cached = await getCache(path);
+    if (!cached) return null;
+    emitFetchMeta({ path, fromCache: true, cachedAt: cached.cachedAt });
+    return cached.data;
 }
 
 async function refreshTokens(refreshToken) {
@@ -43,12 +69,7 @@ async function refreshTokens(refreshToken) {
     return refreshPromise;
 }
 
-export async function apiFetch(path, options = {}, retry = true) {
-    const method = (options.method || 'GET').toUpperCase();
-    if (isWriteMethod(method) && !isAuthPath(path)) {
-        assertRemoteWriteAllowed();
-    }
-
+export async function remoteApiFetch(path, options = {}, retry = true) {
     const tokens = await getStoredTokens();
     const headers = {
         'Content-Type': 'application/json',
@@ -67,7 +88,7 @@ export async function apiFetch(path, options = {}, retry = true) {
     if (response.status === 401 && retry && tokens?.refreshToken) {
         try {
             const refreshed = await refreshTokens(tokens.refreshToken);
-            return apiFetch(path, {
+            return remoteApiFetch(path, {
                 ...options,
                 headers: {
                     ...(options.headers || {}),
@@ -90,6 +111,43 @@ export async function apiFetch(path, options = {}, retry = true) {
     }
 
     return data;
+}
+
+export async function apiFetch(path, options = {}, retry = true) {
+    const method = (options.method || 'GET').toUpperCase();
+    const online = getIsOnline();
+
+    if (options._remoteOnly) {
+        return remoteApiFetch(path, options, retry);
+    }
+
+    if (isWriteMethod(method) && !isAuthPath(path)) {
+        if (!online) {
+            return handleOfflineWrite(path, method, options.body);
+        }
+        assertRemoteWriteAllowed();
+    }
+
+    if (method === 'GET' && !online) {
+        const cached = await readCachedGet(path);
+        if (cached) return cached;
+        throw new ApiError('No cached data available offline', 0, { offline: true });
+    }
+
+    try {
+        const data = await remoteApiFetch(path, options, retry);
+        if (method === 'GET') {
+            await setCache(path, data);
+            emitFetchMeta({ path, fromCache: false });
+        }
+        return data;
+    } catch (err) {
+        if (method === 'GET' && (isNetworkFailure(err) || !online)) {
+            const cached = await readCachedGet(path);
+            if (cached) return cached;
+        }
+        throw err;
+    }
 }
 
 export async function login(username, password) {
@@ -155,8 +213,14 @@ export async function fetchRestaurants({ lat, long, filterDist } = {}) {
 }
 
 export async function fetchRestaurant(restaurantId) {
+    if (isLocalId(restaurantId)) {
+        const local = await getLocalRestaurantResponse(restaurantId);
+        if (local) return local;
+    }
     return apiFetch(`/restaurants/${restaurantId}`);
 }
+
+export { isOfflineQueuedResult };
 
 export async function fetchCheckinData(restaurantId) {
     return apiFetch(`/restaurants/${restaurantId}/checkin`);
@@ -221,6 +285,10 @@ export async function fetchMenuCategories(restaurantId) {
 }
 
 export async function fetchMenuItem(restaurantId, menuItemId) {
+    if (isLocalId(menuItemId)) {
+        const local = await getLocalMenuItemResponse(menuItemId);
+        if (local) return local;
+    }
     return apiFetch(`/restaurants/${restaurantId}/menu-items/${menuItemId}`);
 }
 

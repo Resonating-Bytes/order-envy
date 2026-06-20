@@ -22,6 +22,7 @@ import ScrollToTopButton from '../components/ScrollToTopButton';
 import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
 import useShrinkingScreenHeader, { useHeaderBackButton } from '../hooks/useShrinkingScreenHeader';
 import { requestCurrentLocation } from '../utils/location';
+import { notifyIfOfflineQueued } from '../utils/offlineFeedback';
 import {
     buildRestaurantPayload,
     formatReverseGeocodeAddress,
@@ -194,10 +195,12 @@ export default function RestaurantFormScreen({ route, navigation }) {
             });
 
             if (isEdit) {
-                await updateRestaurant(restaurantId, payload);
+                const result = await updateRestaurant(restaurantId, payload);
+                notifyIfOfflineQueued(result, 'Restaurant');
                 navigation.goBack();
             } else {
                 const result = await createRestaurant(payload);
+                notifyIfOfflineQueued(result, 'Restaurant');
                 navigation.replace('RestaurantDetail', {
                     restaurantId: result.restaurant._id,
                     restaurantName: result.restaurant.name,
@@ -217,7 +220,8 @@ export default function RestaurantFormScreen({ route, navigation }) {
         setDeleting(true);
         setError('');
         try {
-            await deleteRestaurant(restaurantId);
+            const result = await deleteRestaurant(restaurantId);
+            notifyIfOfflineQueued(result, 'Delete');
             navigation.dispatch(
                 CommonActions.reset({
                     index: 0,
