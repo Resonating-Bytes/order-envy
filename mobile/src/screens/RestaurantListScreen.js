@@ -7,11 +7,11 @@ import {
     Text,
     View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { fetchRestaurants, fetchRatingMeta } from '../api/client';
 import DropdownPicker from '../components/DropdownPicker';
 import LoadingView from '../components/LoadingView';
-import LogoutHeaderButton from '../components/LogoutHeaderButton';
-import AddHeaderButton from '../components/AddHeaderButton';
+import SettingsHeaderButton from '../components/SettingsHeaderButton';
 import FriendsHeaderButton from '../components/FriendsHeaderButton';
 import RecommendationsSection from '../components/RecommendationsSection';
 import RatingImage from '../components/RatingImage';
@@ -38,6 +38,8 @@ const RADIUS_OPTIONS = [
     { id: 100, label: '100 miles' },
     { id: 'all', label: 'All restaurants' },
 ];
+
+const ADD_RESTAURANT_ITEM = { _id: '__add_restaurant__', listType: 'add' };
 
 function getRadiusLabel(filterDist) {
     return RADIUS_OPTIONS.find((option) => option.id === filterDist)?.label || 'All restaurants';
@@ -113,7 +115,7 @@ const listHeaderStyles = StyleSheet.create({
 });
 
 export default function RestaurantListScreen({ navigation }) {
-    const { logout, user } = useAuth();
+    const { user } = useAuth();
     const userId = user?.id || user?._id;
     const {
         scrollY,
@@ -128,13 +130,12 @@ export default function RestaurantListScreen({ navigation }) {
     ), [navigation]);
 
     const headerRightAction = React.useMemo(() => (
-        <View style={styles.headerActions}>
-            <AddHeaderButton
-                onPress={() => navigation.navigate('RestaurantForm', { mode: 'create' })}
-            />
-            <LogoutHeaderButton onPress={logout} />
-        </View>
-    ), [navigation, logout]);
+        <SettingsHeaderButton onPress={() => navigation.navigate('Settings')} />
+    ), [navigation]);
+
+    const handleAddRestaurant = useCallback(() => {
+        navigation.navigate('RestaurantForm', { mode: 'create' });
+    }, [navigation]);
 
     const headerPadding = useShrinkingScreenHeader(navigation, {
         title: 'Restaurants',
@@ -156,6 +157,11 @@ export default function RestaurantListScreen({ navigation }) {
     const displayedRestaurants = useMemo(
         () => sortRestaurants(restaurants, sortBy, coords),
         [restaurants, sortBy, coords]
+    );
+
+    const listData = useMemo(
+        () => [ADD_RESTAURANT_ITEM, ...displayedRestaurants],
+        [displayedRestaurants]
     );
 
     const loadRestaurants = useCallback(async ({
@@ -280,7 +286,24 @@ export default function RestaurantListScreen({ navigation }) {
         handleRefresh,
     ]);
 
+    const renderAddRestaurant = useCallback(() => (
+        <Pressable
+            style={({ pressed }) => [
+                styles.addCard,
+                pressed && styles.addCardPressed,
+            ]}
+            onPress={handleAddRestaurant}
+        >
+            <Ionicons name="add" size={22} color={colors.primary} />
+            <Text style={styles.addCardText}>Add restaurant</Text>
+        </Pressable>
+    ), [handleAddRestaurant]);
+
     const renderItem = useCallback(({ item }) => {
+        if (item.listType === 'add') {
+            return renderAddRestaurant();
+        }
+
         const miles = coords
             ? getRestaurantDistance(item, coords.lat, coords.long)
             : null;
@@ -298,18 +321,18 @@ export default function RestaurantListScreen({ navigation }) {
                     <Text style={styles.name} numberOfLines={2}>
                         {item.name}
                     </Text>
-                    <View style={styles.metaRow}>
-                        {item.location?.address ? (
-                            <Text style={styles.address} numberOfLines={1}>
-                                {item.location.address}
-                            </Text>
-                        ) : (
-                            <View style={styles.addressSpacer} />
-                        )}
-                        {miles != null ? (
-                            <Text style={styles.distance}>{formatDistance(miles)}</Text>
-                        ) : null}
-                    </View>
+                    {(miles != null || item.location?.address) ? (
+                        <View style={styles.metaRow}>
+                            {miles != null ? (
+                                <Text style={styles.distance}>{formatDistance(miles)}</Text>
+                            ) : null}
+                            {item.location?.address ? (
+                                <Text style={styles.address} numberOfLines={1}>
+                                    {item.location.address}
+                                </Text>
+                            ) : null}
+                        </View>
+                    ) : null}
                 </View>
                 {item.userAverageRating != null ? (
                     <View style={styles.cardRating}>
@@ -320,9 +343,22 @@ export default function RestaurantListScreen({ navigation }) {
                         />
                     </View>
                 ) : null}
+                <View style={styles.cardChevron}>
+                    <Ionicons name="chevron-forward" size={22} color={colors.textMuted} />
+                </View>
             </Pressable>
         );
-    }, [coords, navigation, ratingInfo]);
+    }, [coords, navigation, ratingInfo, renderAddRestaurant]);
+
+    const emptyMessage = locationStatus === 'active' && filterDist !== 'all'
+        ? `No restaurants within ${filterDist} miles.`
+        : 'No restaurants yet.';
+
+    const renderListFooter = useCallback(() => (
+        displayedRestaurants.length === 0 ? (
+            <Text style={styles.empty}>{emptyMessage}</Text>
+        ) : null
+    ), [displayedRestaurants.length, emptyMessage]);
 
     if (loading && !refreshing && restaurants.length === 0) {
         return <LoadingView message="Loading restaurants..." />;
@@ -333,10 +369,11 @@ export default function RestaurantListScreen({ navigation }) {
             <FlatList
                 ref={scrollRef}
                 style={styles.list}
-                data={displayedRestaurants}
+                data={listData}
                 keyExtractor={(item) => item._id}
                 renderItem={renderItem}
                 ListHeaderComponent={renderListHeader}
+                ListFooterComponent={renderListFooter}
                 onScroll={onScroll}
                 scrollEventThrottle={16}
                 refreshControl={(
@@ -347,18 +384,7 @@ export default function RestaurantListScreen({ navigation }) {
                         progressViewOffset={headerPadding}
                     />
                 )}
-                contentContainerStyle={
-                    displayedRestaurants.length
-                        ? [styles.listContent, { paddingTop: headerPadding }]
-                        : [styles.listEmpty, { paddingTop: headerPadding }]
-                }
-                ListEmptyComponent={(
-                    <Text style={styles.empty}>
-                        {locationStatus === 'active' && filterDist !== 'all'
-                            ? `No restaurants within ${filterDist} miles.`
-                            : 'No restaurants yet.'}
-                    </Text>
-                )}
+                contentContainerStyle={[styles.listContent, { paddingTop: headerPadding }]}
             />
             <ScrollToTopButton visible={showScrollToTop} onPress={scrollToTop} />
         </View>
@@ -369,11 +395,6 @@ const styles = StyleSheet.create({
     screen: {
         flex: 1,
     },
-    headerActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
     list: {
         flex: 1,
     },
@@ -382,12 +403,27 @@ const styles = StyleSheet.create({
         paddingBottom: 16,
         backgroundColor: '#f8faf8',
     },
-    listEmpty: {
-        flexGrow: 1,
+    addCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 16,
-        paddingBottom: 16,
-        backgroundColor: '#f8faf8',
+        gap: 8,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: colors.primary,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        marginTop: 12,
+        marginBottom: 12,
+    },
+    addCardPressed: {
+        opacity: 0.85,
+    },
+    addCardText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: colors.primary,
     },
     card: {
         flexDirection: 'row',
@@ -404,7 +440,6 @@ const styles = StyleSheet.create({
     cardMain: {
         flex: 1,
         minWidth: 0,
-        justifyContent: 'center',
         gap: 4,
     },
     cardRating: {
@@ -414,6 +449,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         flexShrink: 0,
     },
+    cardChevron: {
+        alignSelf: 'stretch',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexShrink: 0,
+        paddingLeft: 2,
+    },
     name: {
         fontSize: 18,
         fontWeight: '700',
@@ -422,16 +464,19 @@ const styles = StyleSheet.create({
     metaRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
+        gap: 8,
         minHeight: 18,
     },
     address: {
         flex: 1,
+        minWidth: 0,
         fontSize: 13,
         color: '#6b7280',
     },
-    addressSpacer: {
-        flex: 1,
+    metaSeparator: {
+        fontSize: 13,
+        color: '#d1d5db',
+        flexShrink: 0,
     },
     distance: {
         fontSize: 13,

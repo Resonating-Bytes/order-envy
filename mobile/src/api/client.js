@@ -163,6 +163,13 @@ export async function fetchCurrentUser() {
     return apiFetch('/users/me');
 }
 
+export async function updateUserProfile(userId, data) {
+    return apiFetch(`/users/${userId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+}
+
 export async function geocodeAddress(address) {
     return apiFetch(`/location/latlong/${encodeURIComponent(address)}`);
 }

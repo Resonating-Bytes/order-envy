@@ -3,6 +3,7 @@ export { default as AddHeaderButton } from '../AddHeaderButton';
 export { default as EditHeaderButton } from '../EditHeaderButton';
 export { default as FriendsHeaderButton } from '../FriendsHeaderButton';
 export { default as LogoutHeaderButton } from '../LogoutHeaderButton';
+export { default as SettingsHeaderButton } from '../SettingsHeaderButton';
 export { default as RecommendationsSection } from '../RecommendationsSection';
 export { default as HeaderIconButton, headerIconButtonStyles } from '../HeaderIconButton';
 export {

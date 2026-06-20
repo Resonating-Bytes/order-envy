@@ -1,6 +1,7 @@
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import HeaderIconButton from './HeaderIconButton';
+import { headerButton } from '../theme/header';
 import { colors } from '../theme/colors';
 
 export default function EditHeaderButton({ onPress }) {
@@ -8,7 +9,7 @@ export default function EditHeaderButton({ onPress }) {
         <HeaderIconButton
             onPress={onPress}
             accessibilityLabel="Edit restaurant"
-            icon={<Ionicons name="create-outline" size={18} color={colors.primary} />}
+            icon={<Ionicons name="create-outline" size={headerButton.iconSize} color={colors.primary} />}
         />
     );
 }
