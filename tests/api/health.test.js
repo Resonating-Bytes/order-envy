@@ -28,6 +28,27 @@ describe('API v1 health and public routes', () => {
         });
     });
 
+    describe('GET /api/v1/meta/compatibility', () => {
+        it('returns compatibility metadata without auth', async () => {
+            const res = await request(app).get('/api/v1/meta/compatibility');
+            expect(res.status).toBe(200);
+            expect(res.body).toMatchObject({
+                minAppVersion: '1.0.0',
+                backendRevision: '20260620100000',
+            });
+            expect(res.body.latestAppVersion).toMatch(/^\d+\.\d+\.\d+$/);
+            expect(res.body.capabilities).toEqual(
+                expect.arrayContaining(['google_auth', 'friends', 'recommendations']),
+            );
+        });
+
+        it('is available on Vercel-style /v1/meta/compatibility path', async () => {
+            const res = await request(app).get('/v1/meta/compatibility');
+            expect(res.status).toBe(200);
+            expect(res.body.backendRevision).toBe('20260620100000');
+        });
+    });
+
     describe('GET /api/v1/restaurants/meta/ratings', () => {
         it('returns rating info', async () => {
             const res = await request(app).get('/api/v1/restaurants/meta/ratings');

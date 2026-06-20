@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '../config';
 import { clearSession, getStoredTokens, saveSession } from '../storage/session';
+import { assertRemoteWriteAllowed } from '../lib/compatibility';
 
 export class ApiError extends Error {
     constructor(message, status, extras = {}) {
@@ -11,6 +12,14 @@ export class ApiError extends Error {
 }
 
 let refreshPromise = null;
+
+function isWriteMethod(method) {
+    return ['POST', 'PUT', 'PATCH', 'DELETE'].includes(String(method || 'GET').toUpperCase());
+}
+
+function isAuthPath(path) {
+    return path.startsWith('/auth/');
+}
 
 async function refreshTokens(refreshToken) {
     if (!refreshPromise) {
@@ -35,6 +44,11 @@ async function refreshTokens(refreshToken) {
 }
 
 export async function apiFetch(path, options = {}, retry = true) {
+    const method = (options.method || 'GET').toUpperCase();
+    if (isWriteMethod(method) && !isAuthPath(path)) {
+        assertRemoteWriteAllowed();
+    }
+
     const tokens = await getStoredTokens();
     const headers = {
         'Content-Type': 'application/json',

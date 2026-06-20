@@ -12,7 +12,8 @@
 - [x] Friends and recommendations — requests, recommend flows, list + detail recs, friend recommendations on restaurant list (matches web)
 
 ## Mobile (future)
-- [ ] App versioning — minimum version checks, CI gates, block saves when client/API mismatch (see BoundForTheRoad)
+- [x] App versioning — minimum version checks, CI gates, block saves when client/API mismatch (see BoundForTheRoad)
+- [ ] Offline mode — local persistence, offline reads/writes, and sync strategy for reconnect
 - [x] Settings screen — replace main-header logout with a gear icon; move log out (and account/profile actions) into settings
 - [ ] Friend activity feed on friend profile
 - [ ] Edit permissions for restaurants / menu items
