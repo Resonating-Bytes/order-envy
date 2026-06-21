@@ -8,11 +8,13 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import {
     fetchCheckinData,
     fetchRatingMeta,
     submitCheckin,
 } from '../api/client';
+import FormKeyboardAvoidingView from '../components/FormKeyboardAvoidingView';
 import LoadingView from '../components/LoadingView';
 import RatingPicker from '../components/RatingPicker';
 import ScrollToTopButton from '../components/ScrollToTopButton';
@@ -175,11 +177,12 @@ export default function CheckInScreen({ route, navigation }) {
     }
 
     return (
-        <View style={styles.screen}>
+        <FormKeyboardAvoidingView style={styles.screen}>
             <ScrollView
                 ref={scrollRef}
                 style={styles.container}
                 contentContainerStyle={[styles.content, { paddingTop: headerPadding }]}
+                keyboardShouldPersistTaps="handled"
                 onScroll={onScroll}
                 scrollEventThrottle={16}
             >
@@ -273,7 +276,7 @@ export default function CheckInScreen({ route, navigation }) {
             </Pressable>
             </ScrollView>
             <ScrollToTopButton visible={showScrollToTop} onPress={scrollToTop} />
-        </View>
+        </FormKeyboardAvoidingView>
     );
 }
 

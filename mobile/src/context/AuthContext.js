@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { fetchCurrentUser, login as apiLogin, loginWithGoogle as apiLoginWithGoogle, logout as apiLogout, updateUserProfile as apiUpdateUserProfile } from '../api/client';
 import { clearSession, getStoredTokens, getStoredUser, saveSession } from '../storage/session';
+import { clearOfflineData } from '../storage/offlineStore';
 
 const AuthContext = createContext(null);
 
@@ -51,6 +52,7 @@ export function AuthProvider({ children }) {
 
     const logout = useCallback(async () => {
         await apiLogout();
+        await clearOfflineData();
         setUser(null);
     }, []);
 

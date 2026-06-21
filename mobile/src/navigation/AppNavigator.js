@@ -1,10 +1,9 @@
 import React from 'react';
-import { Platform, View } from 'react-native';
+import { Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import LoadingView from '../components/LoadingView';
-import OfflineBanner from '../components/OfflineBanner';
 import LoginScreen from '../screens/LoginScreen';
 import RestaurantListScreen from '../screens/RestaurantListScreen';
 import RestaurantDetailScreen from '../screens/RestaurantDetailScreen';
@@ -35,9 +34,7 @@ const screenOptions = Platform.select({
 
 function AppStack() {
     return (
-        <View style={{ flex: 1 }}>
-            <OfflineBanner />
-            <Stack.Navigator screenOptions={screenOptions}>
+        <Stack.Navigator screenOptions={screenOptions}>
             <Stack.Screen
                 name="RestaurantList"
                 component={RestaurantListScreen}
@@ -84,7 +81,6 @@ function AppStack() {
                 options={{ title: '' }}
             />
         </Stack.Navigator>
-        </View>
     );
 }
 

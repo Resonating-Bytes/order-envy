@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { getRatingImageSource, getRatingInfo } from '../utils/ratings';
+import { ensureRatingAssetsLoaded, getRatingImageUri } from '../lib/ratingAssets';
+import { getRatingInfo, RATING_IMAGE_SOURCES } from '../utils/ratings';
 
 export default function RatingImage({
     rating,
@@ -10,12 +11,32 @@ export default function RatingImage({
     style,
     imageStyle,
 }) {
+    const [assetsReady, setAssetsReady] = useState(false);
     const info = getRatingInfo(ratingInfo, rating);
+    const rounded = Math.round(Number(rating));
+
+    useEffect(() => {
+        let cancelled = false;
+        ensureRatingAssetsLoaded()
+            .then(() => {
+                if (!cancelled) setAssetsReady(true);
+            })
+            .catch(() => {
+                if (!cancelled) setAssetsReady(true);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const source = assetsReady && getRatingImageUri(rounded)
+        ? { uri: getRatingImageUri(rounded) }
+        : (RATING_IMAGE_SOURCES[rounded] || RATING_IMAGE_SOURCES[3]);
 
     return (
         <View style={[styles.container, style]} accessibilityLabel={info.alt}>
             <Image
-                source={getRatingImageSource(rating)}
+                source={source}
                 style={[
                     styles.image,
                     { width: size, height: size },

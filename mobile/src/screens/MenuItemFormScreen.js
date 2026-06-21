@@ -17,6 +17,7 @@ import {
 } from '../api/client';
 import DropdownPicker from '../components/DropdownPicker';
 import LoadingView from '../components/LoadingView';
+import FormKeyboardAvoidingView from '../components/FormKeyboardAvoidingView';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
 import useShrinkingScreenHeader, { useHeaderBackButton } from '../hooks/useShrinkingScreenHeader';
@@ -173,7 +174,7 @@ export default function MenuItemFormScreen({ route, navigation }) {
     const busy = submitting || deleting;
 
     return (
-        <View style={styles.screen}>
+        <FormKeyboardAvoidingView style={styles.screen}>
             <ScrollView
                 ref={scrollRef}
                 style={styles.container}
@@ -192,6 +193,8 @@ export default function MenuItemFormScreen({ route, navigation }) {
                     placeholder="Menu item name"
                     value={name}
                     onChangeText={setName}
+                    autoCapitalize="words"
+                    autoCorrect={false}
                     autoFocus={!isEdit}
                 />
 
@@ -289,7 +292,7 @@ export default function MenuItemFormScreen({ route, navigation }) {
                 ) : null}
             </ScrollView>
             <ScrollToTopButton visible={showScrollToTop} onPress={scrollToTop} />
-        </View>
+        </FormKeyboardAvoidingView>
     );
 }
 

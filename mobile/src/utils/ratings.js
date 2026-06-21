@@ -40,7 +40,12 @@ export const RATING_IMAGE_SOURCES = {
 };
 
 export function getRatingOptions(ratingInfo = []) {
-    return ratingInfo.length ? ratingInfo : DEFAULT_RATING_INFO;
+    const source = ratingInfo?.length ? ratingInfo : DEFAULT_RATING_INFO;
+    return source.map((entry, index) => ({
+        ...DEFAULT_RATING_INFO[index],
+        ...entry,
+        value: Number(entry?.value ?? index + 1),
+    }));
 }
 
 export function getRatingInfo(ratingInfo, rating) {

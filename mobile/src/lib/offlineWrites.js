@@ -1,6 +1,7 @@
 import {
     addOutboxItem,
     getLocalEntity,
+    getLocalEntities,
     getOutbox,
     getIdMap,
     patchRestaurantListCache,
@@ -9,9 +10,18 @@ import {
     setIdMapEntry,
     setLocalEntity,
     updateOutboxItem,
+    emitSyncComplete,
 } from '../storage/offlineStore';
+import {
+    applySyncIdMapToCaches,
+    mergeMenuItemIntoDetail,
+    patchRestaurantDetailCache,
+    removeMenuItemFromDetail,
+    stripPendingSyncFlags,
+} from './offlineCache';
+import * as offlineStore from '../storage/offlineStore';
 import { createLocalId, isLocalId, remapBody, remapId, remapPath } from './offlineIds';
-import { getIsOnline } from './network';
+import { getIsOnline, isNetworkOnline } from './network';
 import { assertRemoteWriteAllowed } from './compatibility';
 
 export class OfflineQueuedError extends Error {
@@ -80,10 +90,67 @@ function groupMenuByCategory(menuItems = []) {
 export async function getLocalRestaurantResponse(restaurantId) {
     const local = await getLocalEntity('restaurants', restaurantId);
     if (!local) return null;
+    const categories = groupMenuByCategory(local.menuItems || []);
     return {
         restaurant: local,
-        menuByCategory: groupMenuByCategory(local.menuItems || []),
+        menuByCategory: categories,
+        categories,
     };
+}
+
+export async function getLocalCheckinData(restaurantId) {
+    const local = await getLocalRestaurantResponse(restaurantId);
+    if (!local) return null;
+    return {
+        categories: (local.menuByCategory || []).map((group) => ({
+            label: group.label,
+            menuItems: group.menuItems,
+        })),
+    };
+}
+
+function mapDetailToCheckinData(detail) {
+    const groups = detail.menuByCategory || detail.categories || [];
+    return {
+        categories: groups.map((group) => ({
+            label: group.label,
+            menuItems: group.menuItems || [],
+        })),
+    };
+}
+
+/** Offline check-in form from cached check-in or restaurant detail GET. */
+export async function getCachedCheckinData(restaurantId) {
+    const checkinEntry = await offlineStore.getCache(`/restaurants/${restaurantId}/checkin`);
+    if (checkinEntry?.data?.categories) {
+        return checkinEntry.data;
+    }
+
+    const detailEntry = await offlineStore.getCache(`/restaurants/${restaurantId}`);
+    if (detailEntry?.data) {
+        return mapDetailToCheckinData(detailEntry.data);
+    }
+
+    return null;
+}
+
+export async function listPendingLocalRestaurants() {
+    const entities = await getLocalEntities();
+    return Object.values(entities.restaurants || {});
+}
+
+export function mergeRestaurantListData(data = {}, localRestaurants = []) {
+    const remote = data.restaurants || [];
+    const seen = new Set(remote.map((item) => String(item._id)));
+    const mergedLocal = localRestaurants.filter((item) => !seen.has(String(item._id)));
+    return {
+        ...data,
+        restaurants: [...mergedLocal, ...remote],
+    };
+}
+
+async function patchDetailForRestaurant(restaurantId, mutator) {
+    await patchRestaurantDetailCache(restaurantId, mutator, offlineStore);
 }
 
 export async function getLocalMenuItemResponse(menuItemId) {
@@ -110,6 +177,10 @@ export async function handleOfflineWrite(path, method, bodyText) {
             ...data,
             restaurants: [restaurant, ...(data.restaurants || [])],
         }));
+        await offlineStore.setCache(`/restaurants/${localId}`, {
+            restaurant,
+            menuByCategory: [],
+        });
         return { restaurant, offlineQueued: true };
     }
 
@@ -140,6 +211,10 @@ export async function handleOfflineWrite(path, method, bodyText) {
                     ? { ...item, ...updated }
                     : item
             )),
+        }));
+        await patchDetailForRestaurant(restaurantId, (detail) => ({
+            ...detail,
+            restaurant: updated,
         }));
         return { restaurant: updated, offlineQueued: true };
     }
@@ -179,6 +254,10 @@ export async function handleOfflineWrite(path, method, bodyText) {
                 await setLocalEntity('restaurants', restaurantId, restaurant);
             }
         }
+        await patchDetailForRestaurant(
+            restaurantId,
+            (detail) => mergeMenuItemIntoDetail(detail, menuItem),
+        );
         return { menuItem, offlineQueued: true };
     }
 
@@ -197,6 +276,10 @@ export async function handleOfflineWrite(path, method, bodyText) {
                 localEntityId: isLocalId(menuItemId) ? menuItemId : undefined,
                 localEntityType: isLocalId(menuItemId) ? 'menuItems' : undefined,
             });
+            await patchDetailForRestaurant(
+                restaurantId,
+                (detail) => mergeMenuItemIntoDetail(detail, menuItem),
+            );
             return { menuItem, offlineQueued: true };
         }
         if (method === 'DELETE') {
@@ -204,6 +287,10 @@ export async function handleOfflineWrite(path, method, bodyText) {
                 await removeLocalEntity('menuItems', menuItemId);
             }
             await queueItem({ method: 'DELETE', path });
+            await patchDetailForRestaurant(
+                restaurantId,
+                (detail) => removeMenuItemFromDetail(detail, menuItemId),
+            );
             return { ok: true, offlineQueued: true };
         }
     }
@@ -253,9 +340,9 @@ async function applyIdRemap(item, serverId, sessionIdMap) {
     }
 }
 
-export async function flushOutbox(remoteFetch) {
-    if (!getIsOnline()) {
-        return { flushed: 0, remaining: (await getOutbox()).length };
+export async function drainOutbox(remoteFetch) {
+    if (!(await isNetworkOnline()) && !getIsOnline()) {
+        return { flushed: 0, remaining: (await getOutbox()).length, failed: false };
     }
 
     try {
@@ -266,6 +353,7 @@ export async function flushOutbox(remoteFetch) {
             remaining: (await getOutbox()).length,
             blocked: true,
             error: err.message,
+            failed: false,
         };
     }
 
@@ -293,15 +381,40 @@ export async function flushOutbox(remoteFetch) {
                 lastError: err.message || 'Sync failed',
                 lastAttemptAt: Date.now(),
             });
-            break;
+            return {
+                flushed,
+                remaining: (await getOutbox()).length,
+                idMap: sessionIdMap,
+                failed: true,
+                error: err.message || 'Sync failed',
+            };
         }
     }
 
-    return {
+    if (Object.keys(sessionIdMap).length) {
+        await applySyncIdMapToCaches(sessionIdMap, offlineStore);
+        await patchRestaurantListCache((data) => ({
+            ...data,
+            restaurants: stripPendingSyncFlags((data.restaurants || []).map((item) => {
+                const mappedId = sessionIdMap[item._id];
+                if (!mappedId) return item;
+                return { ...item, _id: mappedId };
+            })),
+        }));
+    }
+
+    const result = {
         flushed,
         remaining: (await getOutbox()).length,
         idMap: sessionIdMap,
+        failed: false,
     };
+
+    if (flushed > 0) {
+        emitSyncComplete(result);
+    }
+
+    return result;
 }
 
 export function isOfflineQueuedResult(data) {

@@ -5,7 +5,14 @@ import { headerButton } from '../theme/header';
 import { colors } from '../theme/colors';
 
 export function BackChevronIcon({ color = colors.primary, size = headerButton.iconSize }) {
-    return <Ionicons name="chevron-back" size={size} color={color} />;
+    return (
+        <Ionicons
+            name="chevron-back"
+            size={size}
+            color={color}
+            style={{ marginLeft: -3 }}
+        />
+    );
 }
 
 export default function BackHeaderButton({ onPress }) {
