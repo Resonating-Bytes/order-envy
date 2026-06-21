@@ -2,6 +2,7 @@ import React, { useLayoutEffect, useMemo } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackHeaderButton from '../components/BackHeaderButton';
 import ShrinkingScreenHeader, { getExpandedHeaderHeight } from '../components/ShrinkingScreenHeader';
+import { useOfflineBannerHeight } from '../hooks/useOfflineBannerState';
 
 export function useHeaderBackButton(navigation) {
     return useMemo(
@@ -17,7 +18,8 @@ export default function useShrinkingScreenHeader(navigation, {
     rightAction,
 }) {
     const insets = useSafeAreaInsets();
-    const headerPadding = getExpandedHeaderHeight(insets.top);
+    const bannerHeight = useOfflineBannerHeight();
+    const headerPadding = getExpandedHeaderHeight(insets.top, bannerHeight);
 
     useLayoutEffect(() => {
         navigation.setOptions({
@@ -33,7 +35,7 @@ export default function useShrinkingScreenHeader(navigation, {
                 />
             ),
         });
-    }, [navigation, title, scrollY, leftAction, rightAction]);
+    }, [navigation, title, scrollY, leftAction, rightAction, bannerHeight]);
 
     return headerPadding;
 }

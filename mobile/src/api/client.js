@@ -1,12 +1,17 @@
 import { API_BASE_URL } from '../config';
 import { clearSession, getStoredTokens, saveSession } from '../storage/session';
 import { assertRemoteWriteAllowed } from '../lib/compatibility';
-import { getIsOnline } from '../lib/network';
+import { getIsOnline, isNetworkFailureError } from '../lib/network';
 import {
     getLocalRestaurantResponse,
     getLocalMenuItemResponse,
+    getLocalCheckinData,
+    getCachedCheckinData,
     handleOfflineWrite,
     isOfflineQueuedResult,
+    listPendingLocalRestaurants,
+    mergeRestaurantListData,
+    resolveRestaurantIdForRead,
 } from '../lib/offlineWrites';
 import { isLocalId } from '../lib/offlineIds';
 import {
@@ -14,6 +19,7 @@ import {
     getCache,
     setCache,
 } from '../storage/offlineStore';
+import { getRatingOptions } from '../utils/ratings';
 
 export class ApiError extends Error {
     constructor(message, status, extras = {}) {
@@ -35,9 +41,7 @@ function isAuthPath(path) {
 }
 
 function isNetworkFailure(err) {
-    if (!err) return false;
-    if (err.name === 'TypeError') return true;
-    return /network request failed|failed to fetch|network error/i.test(err.message || '');
+    return isNetworkFailureError(err);
 }
 
 async function readCachedGet(path) {
@@ -122,10 +126,19 @@ export async function apiFetch(path, options = {}, retry = true) {
     }
 
     if (isWriteMethod(method) && !isAuthPath(path)) {
+        const queueWrite = () => handleOfflineWrite(path, method, options.body);
         if (!online) {
-            return handleOfflineWrite(path, method, options.body);
+            return queueWrite();
         }
         assertRemoteWriteAllowed();
+        try {
+            return await remoteApiFetch(path, options, retry);
+        } catch (err) {
+            if (isNetworkFailure(err)) {
+                return queueWrite();
+            }
+            throw err;
+        }
     }
 
     if (method === 'GET' && !online) {
@@ -209,25 +222,79 @@ export async function fetchRestaurants({ lat, long, filterDist } = {}) {
     }
 
     const query = params.toString();
-    return apiFetch(`/restaurants${query ? `?${query}` : ''}`);
+    const path = `/restaurants${query ? `?${query}` : ''}`;
+
+    try {
+        const data = await apiFetch(path);
+        const locals = await listPendingLocalRestaurants();
+        return mergeRestaurantListData(data, locals);
+    } catch (err) {
+        if (err.offline) {
+            const cached = await getCache(path);
+            const locals = await listPendingLocalRestaurants();
+            if (cached?.data || locals.length) {
+                return mergeRestaurantListData(cached?.data || { restaurants: [] }, locals);
+            }
+        }
+        throw err;
+    }
 }
 
 export async function fetchRestaurant(restaurantId) {
-    if (isLocalId(restaurantId)) {
-        const local = await getLocalRestaurantResponse(restaurantId);
+    const resolvedId = await resolveRestaurantIdForRead(restaurantId);
+    if (isLocalId(resolvedId)) {
+        const local = await getLocalRestaurantResponse(resolvedId);
         if (local) return local;
     }
-    return apiFetch(`/restaurants/${restaurantId}`);
+    return apiFetch(`/restaurants/${resolvedId}`);
 }
 
 export { isOfflineQueuedResult };
 
 export async function fetchCheckinData(restaurantId) {
-    return apiFetch(`/restaurants/${restaurantId}/checkin`);
+    const resolvedId = await resolveRestaurantIdForRead(restaurantId);
+    if (isLocalId(resolvedId)) {
+        const local = await getLocalCheckinData(resolvedId);
+        if (local) return local;
+    }
+    try {
+        return await apiFetch(`/restaurants/${resolvedId}/checkin`);
+    } catch (err) {
+        const cached = await getCachedCheckinData(resolvedId);
+        if (cached) {
+            if (!getIsOnline()) {
+                const detailEntry = await getCache(`/restaurants/${resolvedId}`);
+                emitFetchMeta({
+                    path: `/restaurants/${resolvedId}/checkin`,
+                    fromCache: true,
+                    cachedAt: detailEntry?.cachedAt || null,
+                });
+            }
+            return cached;
+        }
+        throw err;
+    }
 }
 
 export async function fetchRatingMeta() {
-    return apiFetch('/restaurants/meta/ratings');
+    const path = '/restaurants/meta/ratings';
+    if (!getIsOnline()) {
+        const cached = await getCache(path);
+        return {
+            ratingInfo: getRatingOptions(cached?.data?.ratingInfo || []),
+        };
+    }
+    try {
+        const meta = await apiFetch(path);
+        return {
+            ratingInfo: getRatingOptions(meta?.ratingInfo || []),
+        };
+    } catch (err) {
+        const cached = await getCache(path);
+        return {
+            ratingInfo: getRatingOptions(cached?.data?.ratingInfo || []),
+        };
+    }
 }
 
 export async function submitCheckin(restaurantId, body) {

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import OfflineBanner from './OfflineBanner';
+import { useOfflineBannerHeight } from '../hooks/useOfflineBannerState';
 import { colors } from '../theme/colors';
 
 const TITLE_LARGE = 42;
@@ -15,17 +17,27 @@ export const HEADER_CONTENT_GAP = 12;
 
 export { TITLE_LARGE, BODY_LARGE };
 
-/** Top padding for scroll content sitting below a shrinking screen header */
-export function getExpandedHeaderHeight(topInset) {
-    return topInset + BODY_LARGE + HEADER_CONTENT_GAP;
+/** Top padding for scroll content sitting below header + optional offline banner */
+export function getExpandedHeaderHeight(topInset, bannerHeight = 0) {
+    return topInset + BODY_LARGE + bannerHeight + HEADER_CONTENT_GAP;
 }
 
 export default function ShrinkingScreenHeader({ scrollY, title, leftAction, rightAction }) {
     const insets = useSafeAreaInsets();
+    const bannerHeight = useOfflineBannerHeight();
+
+    const blueBodyHeight = scrollY.interpolate({
+        inputRange: [0, COLLAPSE_DISTANCE],
+        outputRange: [BODY_LARGE, BODY_SMALL],
+        extrapolate: 'clamp',
+    });
 
     const headerHeight = scrollY.interpolate({
         inputRange: [0, COLLAPSE_DISTANCE],
-        outputRange: [insets.top + BODY_LARGE, insets.top + BODY_SMALL],
+        outputRange: [
+            insets.top + BODY_LARGE + bannerHeight,
+            insets.top + BODY_SMALL + bannerHeight,
+        ],
         extrapolate: 'clamp',
     });
 
@@ -35,9 +47,16 @@ export default function ShrinkingScreenHeader({ scrollY, title, leftAction, righ
         extrapolate: 'clamp',
     });
 
+    const blueSectionHeight = Animated.add(blueBodyHeight, insets.top);
+
     return (
-        <Animated.View style={[styles.header, { height: headerHeight }]}>
-            <View style={[styles.inner, { paddingTop: insets.top }]}>
+        <Animated.View style={[styles.wrapper, { height: headerHeight }]}>
+            <Animated.View
+                style={[
+                    styles.blueSection,
+                    { height: blueSectionHeight, paddingTop: insets.top },
+                ]}
+            >
                 <View style={styles.row}>
                     <View style={[styles.side, styles.sideLeft]}>
                         {leftAction}
@@ -54,18 +73,18 @@ export default function ShrinkingScreenHeader({ scrollY, title, leftAction, righ
                         {rightAction}
                     </View>
                 </View>
-            </View>
+            </Animated.View>
+            <OfflineBanner />
         </Animated.View>
     );
 }
 
 const styles = StyleSheet.create({
-    header: {
-        backgroundColor: colors.primary,
+    wrapper: {
         overflow: 'hidden',
     },
-    inner: {
-        flex: 1,
+    blueSection: {
+        backgroundColor: colors.primary,
         paddingHorizontal: 16,
     },
     row: {

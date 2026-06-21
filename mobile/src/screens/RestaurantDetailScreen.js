@@ -16,6 +16,8 @@ import ScrollToTopButton from '../components/ScrollToTopButton';
 import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
 import useShrinkingScreenHeader, { useHeaderBackButton } from '../hooks/useShrinkingScreenHeader';
 import { useAuth } from '../context/AuthContext';
+import { useOutboxSyncRefresh } from '../hooks/useOutboxSyncRefresh';
+import PendingSyncBadge from '../components/PendingSyncBadge';
 import { formatDistance, getRestaurantDistance } from '../utils/distance';
 import { requestCurrentLocation } from '../utils/location';
 import { averageUserRating, getDisplayRestaurantRating } from '../utils/ratings';
@@ -76,6 +78,10 @@ export default function RestaurantDetailScreen({ route, navigation }) {
             hasLoadedRef.current = true;
         }, [loadRestaurant])
     );
+
+    useOutboxSyncRefresh(() => {
+        loadRestaurant({ silent: true });
+    });
 
     React.useEffect(() => {
         if (passedDistanceMiles != null) return;
@@ -153,6 +159,11 @@ export default function RestaurantDetailScreen({ route, navigation }) {
                 onScroll={onScroll}
                 scrollEventThrottle={16}
             >
+            {restaurant._pendingSync ? (
+                <View style={styles.pendingRow}>
+                    <PendingSyncBadge />
+                </View>
+            ) : null}
             {restaurant.description ? (
                 <Text style={styles.description}>{restaurant.description}</Text>
             ) : null}
@@ -292,6 +303,9 @@ const styles = StyleSheet.create({
     content: {
         padding: 20,
         paddingBottom: 40,
+    },
+    pendingRow: {
+        marginBottom: 12,
     },
     centered: {
         flex: 1,

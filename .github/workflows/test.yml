@@ -1,4 +1,4 @@
-name: Tests
+name: Backend tests
 
 on:
   push:
@@ -20,7 +20,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  backend-test:
+    name: Backend test
     runs-on: ubuntu-latest
 
     services:

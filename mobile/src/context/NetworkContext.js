@@ -6,18 +6,27 @@ import React, {
     useMemo,
     useState,
 } from 'react';
-import { flushOutbox as runFlushOutbox } from '../lib/offlineWrites';
+import { useCompatibility } from './CompatibilityContext';
+import {
+    flushOutbox as runFlushOutbox,
+    getOutboxSyncLastError,
+    getOutboxSyncSnapshot,
+    startOutboxSync,
+} from '../lib/outboxSync';
 import { getIsOnline, initNetworkStatus, subscribeOnlineStatus } from '../lib/network';
 import {
     ensureOfflineSchema,
     getOutbox,
+    clearFetchMeta,
     subscribeFetchMeta,
     subscribePendingChange,
+    subscribeSyncComplete,
 } from '../storage/offlineStore';
 
 const NetworkContext = createContext(null);
 
 export function NetworkProvider({ children, remoteFetch }) {
+    const { canRemoteWrite } = useCompatibility();
     const [isOnline, setIsOnline] = useState(getIsOnline());
     const [pendingCount, setPendingCount] = useState(0);
     const [syncing, setSyncing] = useState(false);
@@ -30,34 +39,18 @@ export function NetworkProvider({ children, remoteFetch }) {
         setPendingCount(outbox.length);
     }, []);
 
-    const flushOutbox = useCallback(async () => {
-        if (!remoteFetch || !getIsOnline()) {
-            await refreshPendingCount();
-            return { flushed: 0, remaining: pendingCount };
-        }
+    const refreshSyncState = useCallback(async () => {
+        const snapshot = await getOutboxSyncSnapshot();
+        setPendingCount(snapshot.pendingCount);
+        setSyncing(snapshot.isSyncing);
+        setLastSyncError(snapshot.lastError || getOutboxSyncLastError() || '');
+    }, []);
 
-        setSyncing(true);
-        setLastSyncError('');
-        try {
-            const result = await runFlushOutbox(remoteFetch);
-            await refreshPendingCount();
-            if (result.blocked && result.error) {
-                setLastSyncError(result.error);
-            } else if (result.remaining > 0) {
-                const outbox = await getOutbox();
-                const failed = outbox.find((item) => item.lastError);
-                if (failed?.lastError) {
-                    setLastSyncError(failed.lastError);
-                }
-            }
-            return result;
-        } catch (err) {
-            setLastSyncError(err.message || 'Sync failed');
-            throw err;
-        } finally {
-            setSyncing(false);
-        }
-    }, [pendingCount, refreshPendingCount, remoteFetch]);
+    const flushOutbox = useCallback(async () => {
+        const result = await runFlushOutbox();
+        await refreshSyncState();
+        return result;
+    }, [refreshSyncState]);
 
     useEffect(() => {
         let cancelled = false;
@@ -69,35 +62,60 @@ export function NetworkProvider({ children, remoteFetch }) {
             }
         })();
 
-        initNetworkStatus();
+        const stopNetworkStatus = initNetworkStatus();
         const unsubNetwork = subscribeOnlineStatus((online) => {
             setIsOnline(online);
+            if (online) {
+                clearFetchMeta();
+                setUsingCachedData(false);
+                setCachedAt(null);
+            }
         });
         const unsubFetchMeta = subscribeFetchMeta((meta) => {
-            setUsingCachedData(!!meta.fromCache);
-            setCachedAt(meta.cachedAt || null);
+            if (meta.fromCache && !getIsOnline()) {
+                setUsingCachedData(true);
+                setCachedAt(meta.cachedAt || null);
+                return;
+            }
+            if (!meta.fromCache) {
+                setUsingCachedData(false);
+                setCachedAt(null);
+            }
         });
         const unsubPending = subscribePendingChange(() => {
             refreshPendingCount();
+            refreshSyncState();
         });
+        const unsubSync = subscribeSyncComplete(() => {
+            refreshSyncState();
+            setLastSyncError('');
+        });
+
+        const stopOutboxSync = remoteFetch
+            ? startOutboxSync({
+                remoteFetch,
+                onStateChange: () => {
+                    refreshSyncState();
+                },
+            })
+            : () => {};
 
         return () => {
             cancelled = true;
+            stopNetworkStatus();
             unsubNetwork();
             unsubFetchMeta();
             unsubPending();
+            unsubSync();
+            stopOutboxSync();
         };
-    }, [refreshPendingCount]);
+    }, [remoteFetch, refreshPendingCount, refreshSyncState]);
 
     useEffect(() => {
-        if (!isOnline || !remoteFetch) return undefined;
-
-        const timer = setTimeout(() => {
-            flushOutbox().catch(() => {});
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }, [isOnline, flushOutbox, remoteFetch]);
+        if (!canRemoteWrite || !remoteFetch) return undefined;
+        flushOutbox().catch(() => {});
+        return undefined;
+    }, [canRemoteWrite, flushOutbox, remoteFetch]);
 
     const value = useMemo(() => ({
         isOnline,

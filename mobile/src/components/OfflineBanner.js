@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { useCompatibility } from '../context/CompatibilityContext';
 import { useNetwork } from '../context/NetworkContext';
 
 function formatCachedAt(timestamp) {
@@ -14,19 +15,23 @@ function formatCachedAt(timestamp) {
 }
 
 export default function OfflineBanner() {
+    const { canRemoteWrite } = useCompatibility();
     const {
         isOnline,
         pendingCount,
         syncing,
         usingCachedData,
         cachedAt,
-        flushOutbox,
     } = useNetwork();
 
-    const showOffline = !isOnline || usingCachedData;
     const showPending = pendingCount > 0;
+    const syncBlocked = showPending && !canRemoteWrite;
 
-    if (!showOffline && !showPending) {
+    if (isOnline && !showPending) {
+        return null;
+    }
+
+    if (!isOnline && !showPending && !usingCachedData) {
         return null;
     }
 
@@ -35,25 +40,24 @@ export default function OfflineBanner() {
         message = usingCachedData
             ? `Offline — showing saved data${cachedAt ? ` from ${formatCachedAt(cachedAt)}` : ''}.`
             : 'Offline — some data may be unavailable.';
-    } else if (usingCachedData) {
-        message = `Using saved data${cachedAt ? ` from ${formatCachedAt(cachedAt)}` : ''}.`;
     }
 
     if (showPending) {
-        const pendingLabel = syncing
-            ? 'Syncing changes...'
-            : `${pendingCount} change${pendingCount === 1 ? '' : 's'} waiting to sync`;
+        const pendingLabel = syncBlocked
+            ? `${pendingCount} change${pendingCount === 1 ? '' : 's'} waiting — update the app to sync`
+            : syncing
+                ? 'Syncing changes...'
+                : `${pendingCount} change${pendingCount === 1 ? '' : 's'} waiting to sync`;
         message = message ? `${message} ${pendingLabel}.` : `${pendingLabel}.`;
+    }
+
+    if (!message) {
+        return null;
     }
 
     return (
         <View style={styles.banner}>
             <Text style={styles.text}>{message}</Text>
-            {showPending && isOnline && !syncing ? (
-                <Pressable onPress={() => flushOutbox()} style={styles.button}>
-                    <Text style={styles.buttonText}>Sync now</Text>
-                </Pressable>
-            ) : null}
         </View>
     );
 }
@@ -65,25 +69,12 @@ const styles = StyleSheet.create({
         borderBottomColor: '#fcd34d',
         paddingHorizontal: 16,
         paddingVertical: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
+        minHeight: 44,
+        justifyContent: 'center',
     },
     text: {
-        flex: 1,
         color: '#92400e',
         fontSize: 13,
         lineHeight: 18,
-    },
-    button: {
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 6,
-        backgroundColor: '#f59e0b',
-    },
-    buttonText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: '600',
     },
 });

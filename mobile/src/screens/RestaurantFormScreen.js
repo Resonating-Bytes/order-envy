@@ -23,6 +23,7 @@ import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
 import useShrinkingScreenHeader, { useHeaderBackButton } from '../hooks/useShrinkingScreenHeader';
 import { requestCurrentLocation } from '../utils/location';
 import { notifyIfOfflineQueued } from '../utils/offlineFeedback';
+import { getIsOnline } from '../lib/network';
 import {
     buildRestaurantPayload,
     formatReverseGeocodeAddress,
@@ -207,7 +208,11 @@ export default function RestaurantFormScreen({ route, navigation }) {
                 });
             }
         } catch (err) {
-            setError(err.message || 'Failed to save restaurant');
+            if (!getIsOnline() && /geocode|network|offline|fetch/i.test(err.message || '')) {
+                setError('Offline — use Find me for GPS coordinates, or save with an address only.');
+            } else {
+                setError(err.message || 'Failed to save restaurant');
+            }
         } finally {
             setSubmitting(false);
         }
@@ -247,6 +252,7 @@ export default function RestaurantFormScreen({ route, navigation }) {
                 style={styles.container}
                 contentContainerStyle={[styles.content, { paddingTop: headerPadding }]}
                 keyboardShouldPersistTaps="handled"
+                automaticallyAdjustKeyboardInsets
                 onScroll={onScroll}
                 scrollEventThrottle={16}
             >
@@ -256,6 +262,8 @@ export default function RestaurantFormScreen({ route, navigation }) {
                     placeholder="Restaurant name"
                     value={name}
                     onChangeText={setName}
+                    autoCapitalize="words"
+                    autoCorrect={false}
                     autoFocus={!isEdit}
                 />
 
@@ -284,7 +292,9 @@ export default function RestaurantFormScreen({ route, navigation }) {
                     placeholder="Description"
                     value={description}
                     onChangeText={setDescription}
+                    autoCapitalize="sentences"
                     multiline
+                    textAlignVertical="top"
                 />
 
                 <Text style={styles.label}>Address</Text>
@@ -293,6 +303,7 @@ export default function RestaurantFormScreen({ route, navigation }) {
                     placeholder="Address (at least City, State)"
                     value={address}
                     onChangeText={handleAddressChange}
+                    autoCapitalize="words"
                 />
 
                 {showFindMe ? (

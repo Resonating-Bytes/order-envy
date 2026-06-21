@@ -12,7 +12,8 @@ on:
       - '.github/workflows/mobile-tests.yml'
 
 jobs:
-  test:
+  mobile-test:
+    name: Mobile test
     runs-on: ubuntu-latest
     defaults:
       run:

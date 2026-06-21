@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Alert,
     Pressable,
@@ -9,8 +9,10 @@ import {
     View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import BackHeaderButton from '../components/BackHeaderButton';
+import FormKeyboardAvoidingView from '../components/FormKeyboardAvoidingView';
 import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
-import useShrinkingScreenHeader, { useHeaderBackButton } from '../hooks/useShrinkingScreenHeader';
+import useShrinkingScreenHeader from '../hooks/useShrinkingScreenHeader';
 import AppVersionSection from '../components/AppVersionSection';
 import OfflineStatusSection from '../components/OfflineStatusSection';
 import { useAuth } from '../context/AuthContext';
@@ -25,15 +27,22 @@ function Field({ label, children }) {
     );
 }
 
+function confirmDiscardChanges() {
+    return new Promise((resolve) => {
+        Alert.alert(
+            'Discard changes?',
+            'You have unsaved changes that will be lost.',
+            [
+                { text: 'Keep editing', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Discard', style: 'destructive', onPress: () => resolve(true) },
+            ],
+        );
+    });
+}
+
 export default function SettingsScreen({ navigation }) {
     const { user, logout, refreshUser, updateProfile } = useAuth();
-    const backButton = useHeaderBackButton(navigation);
     const { scrollY, onScroll } = useAnimatedScreenScroll();
-    const headerPadding = useShrinkingScreenHeader(navigation, {
-        title: 'Settings',
-        scrollY,
-        leftAction: backButton,
-    });
 
     const [email, setEmail] = useState('');
     const [firstName, setFirstName] = useState('');
@@ -43,6 +52,55 @@ export default function SettingsScreen({ navigation }) {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
+
+    const baseline = useMemo(() => ({
+        email: (user?.email || user?.username || '').trim(),
+        firstName: (user?.firstName || '').trim(),
+        lastName: (user?.lastName || '').trim(),
+    }), [user]);
+
+    const isDirty = useMemo(() => {
+        if (oldPassword || newPassword || confirmPassword) return true;
+        return email.trim() !== baseline.email
+            || firstName.trim() !== baseline.firstName
+            || lastName.trim() !== baseline.lastName;
+    }, [
+        email,
+        firstName,
+        lastName,
+        oldPassword,
+        newPassword,
+        confirmPassword,
+        baseline,
+    ]);
+
+    const handleBack = useCallback(() => {
+        navigation.goBack();
+    }, [navigation]);
+
+    const backButton = useMemo(
+        () => <BackHeaderButton onPress={handleBack} />,
+        [handleBack],
+    );
+
+    const headerPadding = useShrinkingScreenHeader(navigation, {
+        title: 'Settings',
+        scrollY,
+        leftAction: backButton,
+    });
+
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('beforeRemove', (event) => {
+            if (!isDirty) return;
+            event.preventDefault();
+            confirmDiscardChanges().then((discard) => {
+                if (discard) {
+                    navigation.dispatch(event.data.action);
+                }
+            });
+        });
+        return unsubscribe;
+    }, [navigation, isDirty]);
 
     const syncFormFromUser = useCallback(() => {
         setEmail(user?.email || user?.username || '');
@@ -129,7 +187,7 @@ export default function SettingsScreen({ navigation }) {
     }
 
     return (
-        <View style={styles.screen}>
+        <FormKeyboardAvoidingView style={styles.screen}>
             <ScrollView
                 style={styles.container}
                 contentContainerStyle={[styles.content, { paddingTop: headerPadding }]}
@@ -236,7 +294,7 @@ export default function SettingsScreen({ navigation }) {
                     </Pressable>
                 </View>
             </ScrollView>
-        </View>
+        </FormKeyboardAvoidingView>
     );
 }
 

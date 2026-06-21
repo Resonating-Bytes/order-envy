@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
     FlatList,
     Pressable,
@@ -7,6 +7,7 @@ import {
     Text,
     View,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchRestaurants, fetchRatingMeta } from '../api/client';
 import DropdownPicker from '../components/DropdownPicker';
@@ -19,6 +20,8 @@ import ScrollToTopButton from '../components/ScrollToTopButton';
 import useAnimatedScreenScroll from '../hooks/useAnimatedScreenScroll';
 import useShrinkingScreenHeader from '../hooks/useShrinkingScreenHeader';
 import { useAuth } from '../context/AuthContext';
+import { useOutboxSyncRefresh } from '../hooks/useOutboxSyncRefresh';
+import PendingSyncBadge from '../components/PendingSyncBadge';
 import {
     formatDistance,
     getRestaurantDistance,
@@ -117,6 +120,7 @@ const listHeaderStyles = StyleSheet.create({
 export default function RestaurantListScreen({ navigation }) {
     const { user } = useAuth();
     const userId = user?.id || user?._id;
+    const hasLoadedRef = useRef(false);
     const {
         scrollY,
         scrollRef,
@@ -220,8 +224,23 @@ export default function RestaurantListScreen({ navigation }) {
     }, [coords, filterDist, userId]);
 
     React.useEffect(() => {
-        loadRestaurants({ refreshLocation: true }).finally(() => setLoading(false));
+        loadRestaurants({ refreshLocation: true }).finally(() => {
+            setLoading(false);
+            hasLoadedRef.current = true;
+        });
     }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            if (!hasLoadedRef.current) return undefined;
+            loadRestaurants({ refreshLocation: false });
+            return undefined;
+        }, [loadRestaurants])
+    );
+
+    useOutboxSyncRefresh(() => {
+        loadRestaurants({ refreshLocation: false });
+    });
 
     React.useEffect(() => {
         fetchRatingMeta()
@@ -321,6 +340,7 @@ export default function RestaurantListScreen({ navigation }) {
                     <Text style={styles.name} numberOfLines={2}>
                         {item.name}
                     </Text>
+                    {item._pendingSync ? <PendingSyncBadge /> : null}
                     {(miles != null || item.location?.address) ? (
                         <View style={styles.metaRow}>
                             {miles != null ? (

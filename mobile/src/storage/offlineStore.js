@@ -35,6 +35,10 @@ export function emitFetchMeta(meta) {
     fetchMetaListeners.forEach((listener) => listener(meta));
 }
 
+export function clearFetchMeta() {
+    emitFetchMeta({ fromCache: false, cachedAt: null });
+}
+
 export function subscribePendingChange(listener) {
     pendingListeners.add(listener);
     return () => pendingListeners.delete(listener);
@@ -75,10 +79,34 @@ export async function setCache(path, data) {
     await writeJson(KEYS.cache, cache);
 }
 
+export async function readCacheMap() {
+    return readJson(KEYS.cache, {});
+}
+
+export async function writeCacheMap(cache) {
+    await writeJson(KEYS.cache, cache);
+}
+
+const syncListeners = new Set();
+
+export function subscribeSyncComplete(listener) {
+    syncListeners.add(listener);
+    return () => syncListeners.delete(listener);
+}
+
+export function emitSyncComplete(result) {
+    syncListeners.forEach((listener) => listener(result));
+}
+
 export async function patchRestaurantListCache(mutator) {
-    const listPaths = Object.keys(await readJson(KEYS.cache, {})).filter((path) => (
+    const cacheMap = await readJson(KEYS.cache, {});
+    let listPaths = Object.keys(cacheMap).filter((path) => (
         path.startsWith('/restaurants') && !path.includes('/restaurants/')
     ));
+    if (!listPaths.length) {
+        await setCache('/restaurants', { restaurants: [], recommendations: [] });
+        listPaths = ['/restaurants'];
+    }
     for (const path of listPaths) {
         const entry = await getCache(path);
         if (!entry?.data?.restaurants) continue;
