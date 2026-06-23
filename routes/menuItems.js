@@ -8,6 +8,7 @@ const { filterUserOwned, flash, FlashType, getRatingInfo } = require('../utils/m
 
 const MenuItem = require('../models/menuItem');
 const Note = require('../models/note');
+const { userCanEditRestaurant } = require('../lib/restaurantPermissions');
 
 // 'index' route
 // no reason to view all menuItems on their own, redirect to restaurant index page
@@ -16,7 +17,7 @@ router.get('/', (req, res) => {
 });
 
 // 'new' route
-router.get('/new', isLoggedIn, cacheRestaurant, (req, res) => {
+router.get('/new', isLoggedIn, canEditMenuItem, cacheRestaurant, (req, res) => {
     const { restaurant } = res.locals;
     if (restaurant) {
         res.render('menuItems/new', { MenuItem, restaurant });
@@ -26,7 +27,7 @@ router.get('/new', isLoggedIn, cacheRestaurant, (req, res) => {
 });
 
 // 'create' route
-router.post('/', isLoggedIn, cacheRestaurant, (req, res) => {
+router.post('/', isLoggedIn, canEditMenuItem, cacheRestaurant, (req, res) => {
     const { menuItem } = req.body;
     const nextAction = menuItem.nextAction;
     delete menuItem.nextAction;
@@ -76,7 +77,9 @@ router.get('/:menuItemID', cacheRestaurant, (req, res) => {
                     if (!('ratings' in res.locals)) {
                         res.locals.ratings = [];
                     }
-                    res.render('menuItems/show', { menuItem, filterUserOwned, note, getRatingInfo });
+                    const { restaurant } = res.locals;
+                    const canEdit = userCanEditRestaurant(res.locals.user, restaurant);
+                    res.render('menuItems/show', { menuItem, filterUserOwned, note, getRatingInfo, canEdit });
                 }
             });
         }
@@ -85,33 +88,43 @@ router.get('/:menuItemID', cacheRestaurant, (req, res) => {
 
 // 'edit' route
 router.get('/:menuItemID/edit', canEditMenuItem, cacheRestaurant, (req, res) => {
-    const { menuItem, restaurant } = res.locals;
-    if (menuItem) {
+    MenuItem.findById(req.params.menuItemID, (err, menuItem) => {
+        if (err || !menuItem) {
+            flash(req, res, FlashType.ERROR, `Menu item not found`);
+            return res.redirect('back');
+        }
+        const { restaurant } = res.locals;
         res.render('menuItems/edit', { MenuItem, menuItem, restaurant });
-    }
+    });
 });
 
 // 'update' route
 router.put('/:menuItemID', canEditMenuItem, cacheRestaurant, (req, res) => {
-    const { menuItem, restaurant } = res.locals;
-    if (menuItem && restaurant) {
-        Object.assign(menuItem, req.body.menuItem);
-        menuItem.save();
+    MenuItem.findById(req.params.menuItemID, (err, menuItem) => {
+        if (err || !menuItem) {
+            flash(req, res, FlashType.ERROR, `Menu item not found`);
+            return res.redirect('/restaurants');
+        }
+        const { restaurant } = res.locals;
         if (restaurant) {
+            Object.assign(menuItem, req.body.menuItem);
+            menuItem.save();
             return res.redirect(`/restaurants/${restaurant._id}`);
         }
-    }
-
-    res.redirect(`/restaurants`);
+        res.redirect('/restaurants');
+    });
 });
 
 // 'delete' route
 router.delete('/:menuItemID', canEditMenuItem, cacheRestaurant, (req, res) => {
-    const { menuItem } = res.locals;
-    if (menuItem) {
-        menuItem.remove((err) => {
-            if (err) {
-                flash(req, res, FlashType.ERROR, `Failed to remove menuItem: ${err.message}`);
+    MenuItem.findById(req.params.menuItemID, (err, menuItem) => {
+        if (err || !menuItem) {
+            flash(req, res, FlashType.ERROR, `Menu item not found`);
+            return res.redirect('/restaurants');
+        }
+        menuItem.remove((removeErr) => {
+            if (removeErr) {
+                flash(req, res, FlashType.ERROR, `Failed to remove menuItem: ${removeErr.message}`);
             } else {
                 flash(req, res, FlashType.SUCCESS, `Menu item deleted`);
             }
@@ -119,11 +132,10 @@ router.delete('/:menuItemID', canEditMenuItem, cacheRestaurant, (req, res) => {
             const { restaurant } = res.locals;
             if (restaurant) {
                 return res.redirect(`/restaurants/${restaurant._id}`);
-            } else {
-                return res.redirect(`/restaurants`);
             }
+            return res.redirect('/restaurants');
         });
-    }
+    });
 });
 
 module.exports = router;

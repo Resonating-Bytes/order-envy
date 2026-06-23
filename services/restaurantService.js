@@ -2,7 +2,20 @@ const Restaurant = require('../models/restaurant');
 const Recommendation = require('../models/recommendation');
 const Note = require('../models/note');
 const List = require('../models/list');
+const User = require('../models/user');
 const { averageRating, filterByDistance, getUserRestaurantRating } = require('../lib/apiHelpers');
+const {
+    userCanEditRestaurant,
+    userCanDeleteRestaurant,
+    userCanManageRestaurant,
+    userIdEquals,
+} = require('../lib/restaurantPermissions');
+
+function permissionError(message = 'You do not have permission for this restaurant') {
+    const err = new Error(message);
+    err.status = 403;
+    return err;
+}
 
 function normalizeLatLong(val) {
     if (val === undefined || val === 'undefined' || val === null || val === 'null') {
@@ -73,6 +86,8 @@ async function listRestaurants(user, { lat, long, filterDist = 25 } = {}) {
 
 async function getRestaurant(restaurantId, user) {
     const restaurant = await Restaurant.findById(restaurantId)
+        .populate('owner', 'username firstName lastName')
+        .populate('editors', 'username firstName lastName')
         .populate({ path: 'menuItems', options: { sort: 'name' }, populate: { path: 'ratings', options: { sort: { createdAt: -1 } } } })
         .populate({ path: 'ratings', options: { sort: { createdAt: -1 } } });
 
@@ -101,6 +116,9 @@ async function getRestaurant(restaurantId, user) {
         restaurant,
         categories: groupMenuByCategory(restaurant),
         userAverageRating: averageRating(restaurant.ratings, user && user._id),
+        canEdit: userCanEditRestaurant(user, restaurant),
+        canDelete: userCanDeleteRestaurant(user, restaurant),
+        canManage: userCanManageRestaurant(user, restaurant),
         note,
         lists,
         recommendations,
@@ -122,12 +140,15 @@ async function createRestaurant(data) {
     return restaurant;
 }
 
-async function updateRestaurant(restaurantId, data) {
+async function updateRestaurant(restaurantId, data, user) {
     const restaurant = await Restaurant.findById(restaurantId);
     if (!restaurant) {
         const err = new Error('Restaurant not found');
         err.status = 404;
         throw err;
+    }
+    if (!userCanEditRestaurant(user, restaurant)) {
+        throw permissionError();
     }
 
     if (data.name !== undefined) restaurant.name = data.name;
@@ -146,15 +167,87 @@ async function updateRestaurant(restaurantId, data) {
     return restaurant;
 }
 
-async function deleteRestaurant(restaurantId) {
+async function deleteRestaurant(restaurantId, user) {
     const restaurant = await Restaurant.findById(restaurantId);
     if (!restaurant) {
         const err = new Error('Restaurant not found');
         err.status = 404;
         throw err;
     }
+    if (!userCanDeleteRestaurant(user, restaurant)) {
+        throw permissionError('Only the restaurant owner can delete this restaurant');
+    }
     await restaurant.deleteOne();
     return { message: 'Restaurant deleted' };
+}
+
+async function claimRestaurant(restaurantId, user) {
+    const restaurant = await Restaurant.findById(restaurantId);
+    if (!restaurant) {
+        const err = new Error('Restaurant not found');
+        err.status = 404;
+        throw err;
+    }
+    if (restaurant.owner) {
+        const err = new Error('Restaurant already has an owner');
+        err.status = 409;
+        throw err;
+    }
+    restaurant.owner = user._id;
+    await restaurant.save();
+    return restaurant;
+}
+
+async function addEditor(restaurantId, user, editorUserId) {
+    const restaurant = await Restaurant.findById(restaurantId);
+    if (!restaurant) {
+        const err = new Error('Restaurant not found');
+        err.status = 404;
+        throw err;
+    }
+    if (!userCanManageRestaurant(user, restaurant)) {
+        throw permissionError('Only the restaurant owner can manage editors');
+    }
+    if (userIdEquals(restaurant.owner, editorUserId)) {
+        const err = new Error('Owner is already an editor');
+        err.status = 400;
+        throw err;
+    }
+    const editor = await User.findById(editorUserId);
+    if (!editor) {
+        const err = new Error('User not found');
+        err.status = 404;
+        throw err;
+    }
+    if (restaurant.editors.some((id) => userIdEquals(id, editorUserId))) {
+        const err = new Error('User is already an editor');
+        err.status = 409;
+        throw err;
+    }
+    restaurant.editors.push(editor._id);
+    await restaurant.save();
+    return restaurant;
+}
+
+async function removeEditor(restaurantId, user, editorUserId) {
+    const restaurant = await Restaurant.findById(restaurantId);
+    if (!restaurant) {
+        const err = new Error('Restaurant not found');
+        err.status = 404;
+        throw err;
+    }
+    if (!userCanManageRestaurant(user, restaurant)) {
+        throw permissionError('Only the restaurant owner can manage editors');
+    }
+    const before = restaurant.editors.length;
+    restaurant.editors = restaurant.editors.filter((id) => !userIdEquals(id, editorUserId));
+    if (restaurant.editors.length === before) {
+        const err = new Error('Editor not found');
+        err.status = 404;
+        throw err;
+    }
+    await restaurant.save();
+    return restaurant;
 }
 
 module.exports = {
@@ -163,5 +256,8 @@ module.exports = {
     createRestaurant,
     updateRestaurant,
     deleteRestaurant,
+    claimRestaurant,
+    addEditor,
+    removeEditor,
     groupMenuByCategory,
 };

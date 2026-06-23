@@ -8,7 +8,7 @@
             <% friendRequests.forEach((friendRequest) => { %>
                 <div class="row new-item-form">
                     <div class="col-9 centered">
-                        <a href="<%= baseURL %>/users/<%= user._id %>/friends/confirm/<%= friendRequest.token %>" class="btn btn-outline-success">
+                        <a href="/users/<%= user._id %>/friends/confirm/<%= friendRequest.token %>" class="btn btn-outline-success">
                             <%= friendRequest.source.getDisplayName() %>
                             <i class="fa-solid fa-check float-right"></i>
                         </a>

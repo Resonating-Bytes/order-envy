@@ -11,7 +11,7 @@ router.get('/categories', (req, res) => {
 });
 
 router.post('/', requireAuth, asyncHandler(async (req, res) => {
-    const menuItem = await menuItemService.createMenuItem(req.params.restaurantId, req.body);
+    const menuItem = await menuItemService.createMenuItem(req.params.restaurantId, req.body, req.user);
     sendJson(res, 201, { menuItem });
 }));
 
@@ -21,12 +21,21 @@ router.get('/:menuItemId', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 router.put('/:menuItemId', requireAuth, asyncHandler(async (req, res) => {
-    const menuItem = await menuItemService.updateMenuItem(req.params.menuItemId, req.body);
+    const menuItem = await menuItemService.updateMenuItem(
+        req.params.restaurantId,
+        req.params.menuItemId,
+        req.body,
+        req.user
+    );
     sendJson(res, 200, { menuItem });
 }));
 
 router.delete('/:menuItemId', requireAuth, asyncHandler(async (req, res) => {
-    const result = await menuItemService.deleteMenuItem(req.params.menuItemId);
+    const result = await menuItemService.deleteMenuItem(
+        req.params.restaurantId,
+        req.params.menuItemId,
+        req.user
+    );
     sendJson(res, 200, result);
 }));
 

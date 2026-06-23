@@ -7,6 +7,17 @@ const restaurantSchema = new mongoose.Schema({
     description: String,
     website: String,
     phone: String,
+    /** Set via claim flow; when unset, any logged-in user may edit. */
+    owner: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+    },
+    /** Users the owner has granted menu/restaurant edit access. */
+    editors: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+    }],
     location: {
         address: String,
         lat: mongoose.Schema.Types.Mixed,

@@ -1,0 +1,87 @@
+<%- include("../partials/header") %>
+
+    <%- include("../partials/deleteConfirm") %>
+
+    <div class="row">
+        <div class="col-2 centered">
+            <a class="btn btn-outline-primary bg-light" href="/restaurants/<%= restaurant._id %>" title="Back to restaurant">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        </div>
+        <div class="col-10">
+            <div class="page-header">
+                Menu editors — <%= restaurant.name %>
+            </div>
+        </div>
+    </div>
+
+    <hr class="spacer">
+
+    <div class="container">
+        <p class="header-text">
+            Editors can update this restaurant and its menu items. Only you (the owner) can delete the restaurant or change who has edit access.
+        </p>
+
+        <h2 class="sub-header-text">Owner</h2>
+        <div class="row new-item-form">
+            <div class="col-12 centered">
+                <span class="btn btn-outline-primary bg-light disabled">
+                    <% if (restaurant.owner && restaurant.owner.getDisplayName) { %>
+                        <%= restaurant.owner.getDisplayName() %>
+                    <% } else { %>
+                        You
+                    <% } %>
+                </span>
+            </div>
+        </div>
+
+        <hr class="spacer">
+
+        <div class="row row-spacer">
+            <div class="col-9">
+                <% if (user.friends && user.friends.length) { %>
+                    <div class="dropdown item-action">
+                        <button class="btn btn-outline-success dropdown-toggle" type="button" data-toggle="dropdown">Add editor...</button>
+                        <div class="dropdown-menu" id="editorDropdown">
+                            <input type="text" id="editorInput" onkeyup="filterFunction('editorInput', 'editorDropdown')" placeholder="Search friends...">
+                            <% user.friends.forEach((friend) => {
+                                const ownerId = restaurant.owner && (restaurant.owner._id || restaurant.owner);
+                                const isOwner = ownerId && String(ownerId) === String(friend._id);
+                                const isEditor = restaurant.editors.some((editor) => String(editor._id) === String(friend._id));
+                                if (!isOwner && !isEditor) { %>
+                                <a class="dropdown-item" href="/restaurants/<%= restaurant._id %>/editors/add/<%= friend._id %>"><%= friend.getDisplayName() %></a>
+                            <% }}); %>
+                        </div>
+                    </div>
+                <% } else { %>
+                    <p>Add friends first to delegate menu editing.</p>
+                <% } %>
+            </div>
+        </div>
+
+        <h2 class="sub-header-text">Editors</h2>
+        <% if (restaurant.editors.length) { %>
+            <% restaurant.editors.forEach((editor) => { %>
+                <div class="row new-item-form">
+                    <div class="col-9 centered">
+                        <span class="btn btn-outline-primary bg-light disabled">
+                            <%= editor.getDisplayName() %>
+                        </span>
+                    </div>
+                    <div class="col-3">
+                        <form class="delete-item" action="/restaurants/<%= restaurant._id %>/editors/<%= editor._id %>?_method=DELETE" onsubmit="return deleteConfirm(`<%= editor.getDisplayName() %>`)" method="POST">
+                            <button class="btn btn-outline-danger" title="Remove editor">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            <% }); %>
+        <% } else { %>
+            <p>No delegated editors yet.</p>
+        <% } %>
+    </div>
+
+    <script type="text/javascript" src="/script/dropdownHandler.js"></script>
+
+<%- include("../partials/footer") %>

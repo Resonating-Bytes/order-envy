@@ -2,14 +2,34 @@ const MenuItem = require('../models/menuItem');
 const Restaurant = require('../models/restaurant');
 const Note = require('../models/note');
 const { filterUserOwned } = require('../utils/misc');
+const { userCanEditRestaurant } = require('../lib/restaurantPermissions');
 
-async function createMenuItem(restaurantId, data) {
+function permissionError(message = 'You do not have permission for this restaurant') {
+    const err = new Error(message);
+    err.status = 403;
+    return err;
+}
+
+async function loadRestaurantForMenuItem(restaurantId) {
     const restaurant = await Restaurant.findById(restaurantId);
     if (!restaurant) {
         const err = new Error('Restaurant not found');
         err.status = 404;
         throw err;
     }
+    return restaurant;
+}
+
+async function assertCanEditRestaurant(restaurantId, user) {
+    const restaurant = await loadRestaurantForMenuItem(restaurantId);
+    if (!userCanEditRestaurant(user, restaurant)) {
+        throw permissionError();
+    }
+    return restaurant;
+}
+
+async function createMenuItem(restaurantId, data, user) {
+    const restaurant = await assertCanEditRestaurant(restaurantId, user);
 
     const menuItem = await MenuItem.create({
         name: data.name,
@@ -40,7 +60,8 @@ async function getMenuItem(menuItemId, user) {
     return { menuItem, note, userRatings: filterUserOwned(user, menuItem.ratings) };
 }
 
-async function updateMenuItem(menuItemId, data) {
+async function updateMenuItem(restaurantId, menuItemId, data, user) {
+    await assertCanEditRestaurant(restaurantId, user);
     const menuItem = await MenuItem.findById(menuItemId);
     if (!menuItem) {
         const err = new Error('Menu item not found');
@@ -55,7 +76,8 @@ async function updateMenuItem(menuItemId, data) {
     return menuItem;
 }
 
-async function deleteMenuItem(menuItemId) {
+async function deleteMenuItem(restaurantId, menuItemId, user) {
+    await assertCanEditRestaurant(restaurantId, user);
     const menuItem = await MenuItem.findById(menuItemId);
     if (!menuItem) {
         const err = new Error('Menu item not found');

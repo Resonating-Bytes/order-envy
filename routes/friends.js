@@ -155,17 +155,23 @@ router.post('/invite', isLoggedIn, (req, res) => {
     }
 });
 
+function recipientMatchesRequest(user, friendRequest) {
+    if (!user || !friendRequest) return false;
+    const recipient = friendRequest.request;
+    return recipient === user.username || recipient === user.email;
+}
+
 // 'confirm' route
 router.get('/confirm/:token', isLoggedIn, (req, res) => {
     const token = req.params.token;
     Friends.findOne({ token, tokenType: { "$in": [TokenType.CONFIRM_FRIEND, TokenType.INVITE_FRIEND] } }, (err, friendRequest) => {
         const localUserID = res.locals.user._id;
         if (err || !friendRequest) {
-            flash(req, res, FlashType.ERROR, `Error confirming friend: ${err.message}`);
-            return res.redirect(`/login`);
-        } else if (!localUserID.equals(friendRequest.request)) {
+            flash(req, res, FlashType.ERROR, `Error confirming friend: ${err ? err.message : 'Request not found'}`);
+            return res.redirect(`/users/${res.locals.user._id}/friends`);
+        } else if (!recipientMatchesRequest(res.locals.user, friendRequest)) {
             flash(req, res, FlashType.ERROR, `This invite isn't for you!`);
-            return res.redirect(`/login`);
+            return res.redirect(`/users/${res.locals.user._id}/friends`);
         } else {
             User.findById(friendRequest.source, (err, foundUser) => {
                 if (err) {
@@ -208,7 +214,7 @@ router.get('/confirm/:token', isLoggedIn, (req, res) => {
 router.delete('/decline/:token', isLoggedIn, (req, res) => {
     const token = req.params.token;
     Friends.findOne({ token, tokenType: { "$in": [TokenType.CONFIRM_FRIEND, TokenType.INVITE_FRIEND] } }, (err, friendRequest) => {
-        if (err || !friendRequest || !friendRequest.request.equals(res.locals.user._id)) {
+        if (err || !friendRequest || !recipientMatchesRequest(res.locals.user, friendRequest)) {
             flash(req, res, FlashType.ERROR, `Failed to find a user with those details, please try again`);
         } else {
             friendRequest.remove();
