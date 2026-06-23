@@ -40,6 +40,7 @@ Copy this checklist and mark items as you go:
 
 ```
 Pre-flight progress:
+- [ ] 0. Confirm branch (not `main`)
 - [ ] 1. Inspect changes
 - [ ] 2. Bump version + CHANGELOG (if mobile app changed)
 - [ ] 3. Backend sanity (if API changed)
@@ -47,6 +48,17 @@ Pre-flight progress:
 - [ ] 5. Run version checks
 - [ ] 6. Report + commit message (required final step)
 ```
+
+### 0. Confirm branch (not `main`)
+
+Run:
+
+```bash
+git rev-parse --abbrev-ref HEAD
+```
+
+- If the result is `main`, **stop** and tell the user to create or switch to a feature branch first (e.g. `git switch -c dev/restaurant-ownership`). Do not bump version, run tests for a release commit, or draft a ship message on `main`.
+- If already on a feature branch, continue.
 
 ### 1. Inspect changes
 
@@ -145,12 +157,12 @@ Summarize:
 Then **always** provide a commit message covering **every file in the current working tree**
 (`git status` / full diff). Do not wait for the user to ask.
 
-**Commit message format** (one fenced code block, summary line + `-` bullets):
+**Commit message format** (one fenced code block, summary line + `-` bullets). Do **not** put the version in the summary line — version belongs in CHANGELOG only; mention it in a bullet if needed:
 
 ```
-Short summary including version (x.y.z) when applicable
+Short summary of the change (no version number)
 - Detail from CHANGELOG or diff
-- Detail
+- Version bump to x.y.z when applicable
 ```
 
 Do not commit unless the user said `create a git commit`.

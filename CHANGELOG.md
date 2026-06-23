@@ -4,6 +4,17 @@ All notable changes to the Order Envy mobile app are documented here.
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-06-23
+
+### Added
+- Restaurant ownership: optional owner and delegated editors; crowd-edit when unowned, restricted edit when claimed
+- API claim and editor delegation endpoints; `canEdit`, `canDelete`, and `canManage` flags on restaurant detail
+- Web claim ownership button and editor management page; permission checks on menu item detail
+
+### Fixed
+- Friend request accept matched username/email instead of ObjectId
+- Mobile restaurant detail hides edit and add-menu when `canEdit` is false
+
 ## [1.0.3] - 2026-06-20
 
 ### Added

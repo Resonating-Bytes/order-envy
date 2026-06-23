@@ -1,7 +1,7 @@
 # Order Envy — TODO
 
 ## Next up
-- [ ] **Restaurant ownership & menu edit permissions** — closes the open design hole where any logged-in user can edit any restaurant/menu (see `middleware/restaurant.js` `canEditRestaurant`). Add an `owner` (and delegated editors) on restaurants. When an owner is set, only the owner or people they designate can add/edit menu items (and likely restaurant metadata — scope TBD). When no owner is set, keep current behavior: any user can add/edit menu items. **Ownership verification:** need a trustworthy claim flow (e.g. tax ID / business verification) so random users cannot claim restaurants they do not own; paid subscription tied to ownership is the likely deterrent even if verification is lightweight. **Platform scope:** implement on web first if mobile ownership UX or verification is too heavy; API rules must enforce permissions regardless of client. **Delegation:** owner can grant menu-edit access to specific users per restaurant.
+- [x] **Restaurant ownership & menu edit permissions** — shipped in 1.0.4 (verified claim deferred; see Business / restaurants)
 
 ## Auth
 - [x] Sign in with Google — OAuth login and account creation (mobile + API)
@@ -21,7 +21,11 @@
 - [ ] Friend activity feed on friend profile
 - [ ] **Incremental sync (local-first refresh)** — strengthen local-first without blocking UI. **List:** on load, show restaurants from local storage immediately; in background, call backend with last-sync timestamp; backend returns restaurant IDs (or full records if payload is acceptable) added/updated since then; app fetches any missing detail and merges into local store, then updates the visible list. **Detail:** same pattern for menu items when opening a restaurant — render cached data first, refresh menu in background when online. Builds on existing AsyncStorage cache/outbox; may evolve toward a structured local DB if needed.
 
+## Web (future)
+- [ ] **Desktop / full-screen web usability pass** — layouts and typography were tuned for narrow mobile form factor; editor management, friends, and other pages render with oversized text and stretched controls on desktop. Add responsive breakpoints, sensible max-width containers, and scale headings/buttons for full-screen browser use.
+
 ## Business / restaurants (future)
+- [ ] **Authenticated ownership claim** — replace interim “anyone can claim” with verified claim flow before setting `restaurant.owner` (business/tax ID check, lightweight verification, paid subscription as deterrent). Required before owner messaging and franchise features.
 - [ ] **Franchise support** — higher-level entity above a single restaurant. Franchise provides a template menu; each location under the franchise can customize from that template. Franchise owners have edit access across all associated restaurants, including delegating menu-edit access per location. Depends on restaurant ownership & permissions model.
 - [ ] **Owner messaging & offers** — restaurant owners can message users who have checked in at their location. Targeting by time window (e.g. recent visitors, lapsed visitors). Use cases: events, coupons, promos. Support custom text and images. **Opt-out:** each message includes a per-restaurant opt-out; users can opt back in via global settings and/or the restaurant detail page. Requires ownership verification and likely subscription; consider push/email channel separately.
 

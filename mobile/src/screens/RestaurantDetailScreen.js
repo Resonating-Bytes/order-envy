@@ -95,15 +95,18 @@ export default function RestaurantDetailScreen({ route, navigation }) {
 
     const headerTitle = data?.restaurant?.name || restaurantName || 'Restaurant';
 
-    const headerRightAction = React.useMemo(() => (
-        <EditHeaderButton
-            onPress={() => navigation.navigate('RestaurantForm', {
-                mode: 'edit',
-                restaurantId,
-                restaurantName: headerTitle,
-            })}
-        />
-    ), [navigation, restaurantId, headerTitle]);
+    const headerRightAction = React.useMemo(() => {
+        if (!data?.canEdit) return null;
+        return (
+            <EditHeaderButton
+                onPress={() => navigation.navigate('RestaurantForm', {
+                    mode: 'edit',
+                    restaurantId,
+                    restaurantName: headerTitle,
+                })}
+            />
+        );
+    }, [data?.canEdit, navigation, restaurantId, headerTitle]);
 
     const headerPadding = useShrinkingScreenHeader(navigation, {
         title: headerTitle,
@@ -134,6 +137,7 @@ export default function RestaurantDetailScreen({ route, navigation }) {
     }
 
     const { restaurant, categories, recommendations = [] } = data;
+    const canEdit = data.canEdit !== false;
     const displayRating = getDisplayRestaurantRating({
         restaurant,
         categories,
@@ -233,16 +237,18 @@ export default function RestaurantDetailScreen({ route, navigation }) {
                 onDeleted={() => loadRestaurant({ silent: true })}
             />
 
-            <Pressable
-                style={styles.addMenuItemButton}
-                onPress={() => navigation.navigate('MenuItemForm', {
-                    mode: 'create',
-                    restaurantId,
-                    restaurantName: restaurant.name,
-                })}
-            >
-                <Text style={styles.addMenuItemButtonText}>Add menu item</Text>
-            </Pressable>
+            {canEdit ? (
+                <Pressable
+                    style={styles.addMenuItemButton}
+                    onPress={() => navigation.navigate('MenuItemForm', {
+                        mode: 'create',
+                        restaurantId,
+                        restaurantName: restaurant.name,
+                    })}
+                >
+                    <Text style={styles.addMenuItemButtonText}>Add menu item</Text>
+                </Pressable>
+            ) : null}
 
             {categories.length === 0 ? (
                 <Text style={styles.emptyMenu}>No menu items yet.</Text>
@@ -258,13 +264,13 @@ export default function RestaurantDetailScreen({ route, navigation }) {
                             <Pressable
                                 key={item._id}
                                 style={styles.menuItem}
-                                onPress={() => navigation.navigate('MenuItemForm', {
+                                onPress={canEdit ? () => navigation.navigate('MenuItemForm', {
                                     mode: 'edit',
                                     restaurantId,
                                     restaurantName: restaurant.name,
                                     menuItemId: item._id,
                                     menuItemName: item.name,
-                                })}
+                                }) : undefined}
                             >
                                 <View style={styles.menuItemHeader}>
                                     <View style={styles.menuItemText}>

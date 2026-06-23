@@ -2,12 +2,18 @@ const express = require('express');
 const router = express.Router({mergeParams: true});
 
 const isLoggedIn = require('../middleware/isLoggedIn');
-const { canEditRestaurant } = require('../middleware/restaurant');
+const { canEditRestaurant, canDeleteRestaurant, canManageOwnedRestaurant } = require('../middleware/restaurant');
 const { filterUserOwned, flash, FlashType, getCookies, getRatingInfo } = require('../utils/misc');
 const List = require('../models/list');
 const Recommendation = require('../models/recommendation');
 const Note = require('../models/note');
 const Restaurant = require('../models/restaurant');
+const {
+    userCanEditRestaurant,
+    userCanDeleteRestaurant,
+    userCanManageRestaurant,
+} = require('../lib/restaurantPermissions');
+const restaurantService = require('../services/restaurantService');
 
 // 'index' route
 router.get('/', (req, res) => {
@@ -158,7 +164,12 @@ function averageRating(ratings, user) {
 
 // 'show' route
 router.get('/:restaurantID', (req, res) => {
-    Restaurant.findById(req.params.restaurantID).populate({path: 'menuItems', options: {sort: 'name'}, populate: {path: 'ratings', options: {sort: {'createdAt': -1}}}}).populate({path: 'ratings', options: {sort: {'createdAt': -1}}}).exec((err, restaurant) => {
+    Restaurant.findById(req.params.restaurantID)
+        .populate('owner', 'username firstName lastName')
+        .populate('editors', 'username firstName lastName')
+        .populate({path: 'menuItems', options: {sort: 'name'}, populate: {path: 'ratings', options: {sort: {'createdAt': -1}}}})
+        .populate({path: 'ratings', options: {sort: {'createdAt': -1}}})
+        .exec((err, restaurant) => {
         if (err) {
             flash(req, res, FlashType.ERROR, `Error getting restaurant: ${err.message}`);
             return res.redirect(`/restaurants`);
@@ -184,7 +195,10 @@ router.get('/:restaurantID', (req, res) => {
 
                                     // sort the recs based on how many people recommended it, then by when it was created
                                     recommendations.sort((a, b) => { return (b.from.length - a.from.length); });
-                                    res.render('restaurants/show', { restaurant, averageRating, filterUserOwned, lists, recommendations, note, getRatingInfo });
+                                    const canEdit = userCanEditRestaurant(res.locals.user, restaurant);
+                                    const canDelete = userCanDeleteRestaurant(res.locals.user, restaurant);
+                                    const canManage = userCanManageRestaurant(res.locals.user, restaurant);
+                                    res.render('restaurants/show', { restaurant, averageRating, filterUserOwned, lists, recommendations, note, getRatingInfo, canEdit, canDelete, canManage });
                                 }
                             });
                         }
@@ -223,7 +237,7 @@ router.put('/:restaurantID', canEditRestaurant, (req, res) => {
 });
 
 // 'delete' route
-router.delete('/:restaurantID', canEditRestaurant, (req, res) => {
+router.delete('/:restaurantID', canDeleteRestaurant, (req, res) => {
     // since we already have the restaurant we can delete it directly
     // othwerwise we would need to do the following:
     //   Restaurant.findByIdAndRemove(req.params.restaurantID, (err) => {
@@ -239,6 +253,59 @@ router.delete('/:restaurantID', canEditRestaurant, (req, res) => {
             return res.redirect('/restaurants');
         });
     }
+});
+
+// claim ownership (interim — no verification yet)
+router.post('/:restaurantID/claim', isLoggedIn, (req, res) => {
+    Restaurant.findById(req.params.restaurantID, (err, restaurant) => {
+        if (err || !restaurant) {
+            flash(req, res, FlashType.ERROR, 'Restaurant not found');
+            return res.redirect('/restaurants');
+        }
+        if (restaurant.owner) {
+            flash(req, res, FlashType.ERROR, 'This restaurant already has an owner');
+            return res.redirect(`/restaurants/${restaurant._id}`);
+        }
+        restaurant.owner = res.locals.user._id;
+        restaurant.save((saveErr) => {
+            if (saveErr) {
+                flash(req, res, FlashType.ERROR, `Could not claim restaurant: ${saveErr.message}`);
+            } else {
+                flash(req, res, FlashType.SUCCESS, 'You are now the owner of this restaurant');
+            }
+            return res.redirect(`/restaurants/${restaurant._id}`);
+        });
+    });
+});
+
+// editor management (owner only, claimed restaurants)
+router.get('/:restaurantID/editors', canManageOwnedRestaurant, (req, res) => {
+    const { restaurant } = res.locals;
+    res.render('restaurants/editors', { restaurant });
+});
+
+router.get('/:restaurantID/editors/add/:userID', canManageOwnedRestaurant, (req, res) => {
+    restaurantService.addEditor(req.params.restaurantID, res.locals.user, req.params.userID)
+        .then(() => {
+            flash(req, res, FlashType.SUCCESS, 'Editor added');
+            return res.redirect(`/restaurants/${req.params.restaurantID}/editors`);
+        })
+        .catch((err) => {
+            flash(req, res, FlashType.ERROR, err.message);
+            return res.redirect(`/restaurants/${req.params.restaurantID}/editors`);
+        });
+});
+
+router.delete('/:restaurantID/editors/:userID', canManageOwnedRestaurant, (req, res) => {
+    restaurantService.removeEditor(req.params.restaurantID, res.locals.user, req.params.userID)
+        .then(() => {
+            flash(req, res, FlashType.SUCCESS, 'Editor removed');
+            return res.redirect(`/restaurants/${req.params.restaurantID}/editors`);
+        })
+        .catch((err) => {
+            flash(req, res, FlashType.ERROR, err.message);
+            return res.redirect(`/restaurants/${req.params.restaurantID}/editors`);
+        });
 });
 
 module.exports = router;
