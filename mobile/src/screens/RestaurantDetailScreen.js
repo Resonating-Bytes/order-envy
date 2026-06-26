@@ -46,15 +46,19 @@ export default function RestaurantDetailScreen({ route, navigation }) {
     const userId = user?.id || user?._id;
 
     const loadRestaurant = useCallback(async ({ silent = false } = {}) => {
-        await loadLocalFirst({
-            getCached: () => fetchRestaurantCached(restaurantId),
-            fetchFresh: () => fetchRestaurant(restaurantId),
-            apply: setData,
-            setLoading: silent ? undefined : setLoading,
-            setRefreshing: silent ? setRefreshing : undefined,
-            setError,
-            silent,
-        });
+        try {
+            await loadLocalFirst({
+                getCached: () => fetchRestaurantCached(restaurantId),
+                fetchFresh: () => fetchRestaurant(restaurantId),
+                apply: setData,
+                setLoading: silent ? undefined : setLoading,
+                setRefreshing: silent ? setRefreshing : undefined,
+                setError,
+                silent,
+            });
+        } catch {
+            // loadLocalFirst already surfaced the error when no cache was available
+        }
     }, [restaurantId]);
 
     React.useEffect(() => {

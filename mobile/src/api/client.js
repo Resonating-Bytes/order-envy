@@ -246,7 +246,7 @@ export async function logout() {
 
 export async function fetchRestaurantsCached(params = {}) {
     const path = buildRestaurantsListPath(params);
-    const entry = await getCacheEntry(path, { allowStale: true });
+    const entry = await getCacheEntry(path, { allowStale: true, touch: false });
     const locals = await listPendingLocalRestaurants();
     if (!entry?.data && !locals.length) {
         return null;
@@ -310,7 +310,7 @@ export async function fetchRestaurantCached(restaurantId) {
     if (isLocalId(resolvedId)) {
         return getLocalRestaurantResponse(resolvedId);
     }
-    const entry = await getCacheEntry(`/restaurants/${resolvedId}`, { allowStale: true });
+    const entry = await getCacheEntry(`/restaurants/${resolvedId}`, { allowStale: true, touch: false });
     return entry?.data || null;
 }
 

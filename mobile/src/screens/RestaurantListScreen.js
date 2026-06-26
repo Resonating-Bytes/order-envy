@@ -220,15 +220,19 @@ export default function RestaurantListScreen({ navigation }) {
                 .catch(() => {});
         };
 
-        await loadLocalFirst({
-            getCached: () => fetchRestaurantsCached(fetchParams),
-            fetchFresh: () => fetchRestaurants(fetchParams),
-            apply: applyListData,
-            setLoading: silent ? undefined : setLoading,
-            setRefreshing: silent ? setRefreshing : undefined,
-            setError,
-            silent,
-        });
+        try {
+            await loadLocalFirst({
+                getCached: () => fetchRestaurantsCached(fetchParams),
+                fetchFresh: () => fetchRestaurants(fetchParams),
+                apply: applyListData,
+                setLoading: silent ? undefined : setLoading,
+                setRefreshing: silent ? setRefreshing : undefined,
+                setError,
+                silent,
+            });
+        } catch {
+            // loadLocalFirst already surfaced the error when no cache was available
+        }
     }, [coords, filterDist, userId]);
 
     React.useEffect(() => {
