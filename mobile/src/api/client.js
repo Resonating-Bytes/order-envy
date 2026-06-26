@@ -27,6 +27,7 @@ import {
 import { getRatingOptions } from '../utils/ratings';
 import { buildRestaurantsListPath } from '../utils/restaurantApiPaths';
 import { getProtectedRestaurantIds } from '../lib/cachePolicy';
+import { mergeRestaurantDetailFromServer } from '../lib/cacheMerge';
 import { fetchAndMergeRestaurantList } from '../lib/listSync';
 
 export class ApiError extends Error {
@@ -289,8 +290,8 @@ export async function fetchRestaurants({ lat, long, filterDist } = {}) {
         const locals = await listPendingLocalRestaurants();
         return mergeRestaurantListData(data, locals);
     } catch (err) {
-        if (err.offline) {
-            const cached = await getCache(path);
+        if (err.offline || isNetworkFailure(err)) {
+            const cached = await getCacheEntry(path, { allowStale: true, touch: false });
             const locals = await listPendingLocalRestaurants();
             if (cached?.data || locals.length) {
                 return mergeRestaurantListData(cached?.data || { restaurants: [] }, locals);
@@ -315,7 +316,36 @@ export async function fetchRestaurant(restaurantId) {
         const local = await getLocalRestaurantResponse(resolvedId);
         if (local) return local;
     }
-    return apiFetch(`/restaurants/${resolvedId}`);
+
+    const path = `/restaurants/${resolvedId}`;
+
+    try {
+        if (getIsOnline()) {
+            const [cachedEntry, outbox, localEntities] = await Promise.all([
+                getCacheEntry(path, { allowStale: true, touch: false }),
+                getOutbox(),
+                getLocalEntities(),
+            ]);
+            const protectedIds = getProtectedRestaurantIds(outbox, localEntities);
+            const serverData = await remoteApiFetch(path, { _remoteOnly: true });
+            const merged = mergeRestaurantDetailFromServer(
+                serverData,
+                cachedEntry?.data,
+                { isProtected: protectedIds.has(String(resolvedId)) },
+            );
+            await writeCachedGet(path, merged);
+            emitFetchMeta({ path, fromCache: false });
+            return merged;
+        }
+
+        return apiFetch(path);
+    } catch (err) {
+        if (err.offline || isNetworkFailure(err)) {
+            const cached = await getCacheEntry(path, { allowStale: true, touch: false });
+            if (cached?.data) return cached.data;
+        }
+        throw err;
+    }
 }
 
 export { isOfflineQueuedResult };
