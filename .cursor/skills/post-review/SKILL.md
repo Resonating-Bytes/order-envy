@@ -4,7 +4,8 @@ description: >-
   Run Order Envy post-review after harden (self-review loop) on an existing PR.
   Audits branch commits, CHANGELOG coverage, and deferred review items; suggests
   fixes or documents deferrals. App version was already bumped by pre-commit before
-  the PR. Use when the user says run post-review, post-review, or pre-merge review.
+  the PR. Use when the user says run post-review, post-review, harden, harden pass,
+  or pre-merge review.
 disable-model-invocation: true
 ---
 
@@ -14,18 +15,18 @@ disable-model-invocation: true
 For all repos, copy to `~/.cursor/skills/post-review/` (personal skill).
 
 Execute on an **existing PR**, after **harden** (the self-review loop). **Pre-commit
-already ran** before the PR was opened — `mobile/app.json` and `CHANGELOG` were bumped then.
+already ran** before the PR was opened — app version and `CHANGELOG` were bumped then.
 
 ## PR lifecycle (where this skill fits)
 
 ```
 make changes
-→ pre-commit          (semver, CHANGELOG, tests — see pre-commit skill)
+→ pre-commit          (app version, CHANGELOG, tests — see pre-commit skill)
 → commit, push, open PR
 → harden              (self-review loop + summarize + this skill)
 → post-review         ← you are here
-→ final commit/push   (only if this pass or harden changed files)
-→ merge after CI
+→ commit              (only if this pass changed files — user says "create a git commit")
+→ merge after CI      (user handles push/merge)
 ```
 
 **Not** the order: post-review → pre-commit. Do **not** tell the user to run
@@ -64,10 +65,12 @@ References:
 - `run post-review` ← primary; enough on its own
 - `post-review`
 - `run post-review checklist`
+- `harden`
+- `harden pass`
 - `pre-merge review` (alias)
 
-A **harden** pass (self-review loop) typically ends by invoking this skill — do
-not treat `harden` as a synonym for post-review when documenting next steps.
+When the user says **harden**, run the self-review loop first, then this skill as the last step.
+Do not treat `harden` as a substitute for post-review when documenting next steps.
 
 If the skill does not attach, reference it with `@post-review` or `@.cursor/skills/post-review/SKILL.md`.
 
@@ -79,29 +82,14 @@ Copy this checklist and mark items as you go:
 
 ```
 Post-review progress:
-- [ ] 0. Confirm branch (not `main` — ask user to branch if needed)
 - [ ] 1. Inspect branch commits
 - [ ] 2. Verify CHANGELOG vs branch diff
 - [ ] 3. Triage deferred review items
-- [ ] 4. Run tests (if fixes made)
-- [ ] 5. Report + next steps (required final step)
+- [ ] 4. Run tests
+- [ ] 5. Commit message (only if this pass changed files)
 ```
 
 **Use `origin/main` as the baseline** for changelog and diff coverage.
-
-### 0. Confirm branch (not `main`)
-
-Read-only check (permitted under this skill):
-
-```bash
-git rev-parse --abbrev-ref HEAD
-```
-
-- If the result is `main`, **stop the post-review workflow** and **ask the
-  user** to create or switch to a feature branch (they choose the name and
-  run `git checkout -b …` or equivalent). Do **not** create or switch
-  branches yourself.
-- If already on a feature branch, continue.
 
 ### 1. Inspect branch commits
 
@@ -123,6 +111,8 @@ For each commit, note:
 
 Suggest squash groupings when many small hardening commits tell one story, but do not rewrite history unless the user asks.
 
+Summarize commit audit findings (count, keep/squash/reword recommendations) in your response.
+
 ### 2. Verify CHANGELOG vs branch diff
 
 Make sure the changelog covers all changes made in this branch (or that exempt
@@ -136,23 +126,25 @@ git diff --stat origin/main
 git show origin/main:mobile/app.json
 ```
 
-Read the top `## [X.Y.Z] - YYYY-MM-DD` section in `CHANGELOG.md` (for the branch's version if bumped).
+Read the top `## [x.y.z] - YYYY-MM-DD` section in `CHANGELOG.md` (for the branch's app version if bumped).
 
 Check:
 
 - Every **user-facing** change under `mobile/src/**`, `mobile/App.js`, `routes/**`, `views/**`, `services/**`, and `models/**` has a bullet (or is intentionally omitted with reason)
 - Release date is **not earlier** than the section below it (newer versions should have same or later date)
-- Top `CHANGELOG.md` heading matches `expo.version` in `mobile/app.json` when the branch bumps app version
-- Dev-only changes (`.cursor/**`, `docs/**`, `mobile/tests/**`, `.github/**`) usually **do not** need CHANGELOG bullets — see `scripts/check-app-version.js` exempt paths
+- Top `CHANGELOG.md` heading matches `mobile/app.json` `expo.version` and `mobile/package.json` `version` when the branch bumps app version
+- Dev-only changes (`.cursor/**`, skill files, `mobile/tests/**`, `.github/**`) usually **do not** need CHANGELOG bullets — see `scripts/check-app-version.js` exempt paths
 
 Fix gaps in `CHANGELOG.md` when obvious; otherwise list missing bullets for the user.
 
-**Version / bump:** By the time post-review runs, **pre-commit already bumped
-`expo.version`** and added the top `CHANGELOG` section before the PR. Verify coverage
+**App version / bump:** By the time post-review runs, **pre-commit already bumped
+app version** and added the top `CHANGELOG` section before the PR. Verify coverage
 and consistency — do **not** bump version or add a new changelog section unless
 this pass introduces **new mobile app changes** not covered by the existing section
 (rare). If harden commits added bullets-worthy fixes, extend the **existing** top
 section; only re-run pre-commit if a semver bump is actually required.
+
+Summarize CHANGELOG coverage (complete / gaps fixed / gaps remaining) in your response.
 
 ### 3. Triage deferred review items
 
@@ -168,9 +160,11 @@ Default posture: fix hygiene (missing tests, changelog, broken commit messages);
 
 If the user supplied a numbered optional list, respond with the same numbers and a one-line verdict each.
 
-### 4. Run tests (if fixes made)
+Summarize deferred items (fix now vs defer vs document) in your response.
 
-Only when step 2 or 3 changed code. Run what changed; run both if unsure:
+### 4. Run tests
+
+**Default: always run** — cheap insurance before merge.
 
 **Backend** (from repo root):
 
@@ -184,28 +178,24 @@ npm test
 cd mobile && npm test
 ```
 
-Skip if this pass was audit-only.
+Run when **any** of these is true (almost always on a real PR branch):
 
-### 5. Report + next steps (always last)
+- The branch has **local commits** ahead of `origin/main`
+- Steps 2 or 3 **changed files** on disk (changelog fixes, deferred “fix now” items, etc.)
+- You are unsure whether files changed — run anyway
 
-Summarize:
+Skip **only** when this pass was purely read-only audit **and** `git status` is clean **and** there are no commits on the branch ahead of `origin/main` (rare for post-review).
 
-- Commit audit (count, keep/squash/reword recommendations)
-- CHANGELOG coverage (complete / gaps fixed / gaps remaining)
-- Deferred items table (fix now vs defer vs document)
-- Test result if step 4 ran
+Report test pass/fail in your response.
 
-If this pass changed any files, **always** end with a commit message (one fenced code block, summary line + `-` bullets) covering **only those local changes**. Do not wait for the user to ask.
+### 5. Commit message (only if this pass changed files)
+
+If steps 2–4 (or triage fixes) left **uncommitted local changes**, end with a commit message in one fenced code block (summary line + `-` bullets) covering **only those changes**. Do not wait for the user to ask.
 
 - **Do not** put the semver in the commit message — version lives in `mobile/app.json`, `CHANGELOG.md`, and the pre-flight report only.
 - Bullets describe **what** was done, not why. As brief as possible.
 
-Otherwise, when the PR looks merge-ready:
-
-- **Push** if harden/post-review commits are local-only
-- **Wait for CI**, then merge
-- Do **not** suggest running pre-commit (already done before the PR)
-- Only mention re-running pre-commit if this pass added mobile app changes that need a semver bump
+If there are **no** uncommitted changes from this pass, **nothing to do here** — no commit message, no push/merge/CI instructions.
 
 Do **not** duplicate pre-commit's version bump rules. Do **not** tell the user to open a PR — post-review assumes one already exists.
 
@@ -213,15 +203,15 @@ Do **not** duplicate pre-commit's version bump rules. Do **not** tell the user t
 
 - Initial app semver bump before the PR — **pre-commit** (already ran)
 - `check-app-version.js` — **pre-commit** (re-run only if this pass needs a new bump)
-- Commit message for the entire branch / all uncommitted work — post-review only drafts a message for files changed during this pass
+- Commit message for files changed **during this pass** only — step 5; not for the whole branch unless the user asks
 - Post-merge operator steps (Vercel deploy, EAS build, TestFlight, manual Expo Go QA)
-- Merging or push — user handles
+- Push, merge, or CI — user handles
 
 ## Split modes
 
 | User says | Do |
 |-----------|-----|
 | `post-review` (default) | Full workflow |
-| `post-review commits only` | Steps 0–1 + report |
-| `post-review changelog` | Steps 0–2 + report |
-| `post-review triage` | Steps 0–1, 3 + report (user supplies open items) |
+| `post-review commits only` | Steps 1 + brief audit summary |
+| `post-review changelog` | Steps 1–2 + brief summary |
+| `post-review triage` | Steps 1, 3 + brief summary (user supplies open items) |
