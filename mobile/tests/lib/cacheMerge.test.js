@@ -46,4 +46,22 @@ describe('cacheMerge', () => {
         expect(merged.restaurant.description).toBe('Queued');
         expect(merged.restaurant._pendingSync).toBe(true);
     });
+
+    test('protected detail keeps server menu when cached menu is empty', () => {
+        const serverMenu = [{ label: 'Entree', menuItems: [{ _id: 'm1', name: 'Soup' }] }];
+        const merged = mergeRestaurantDetailFromServer(
+            {
+                restaurant: { _id: 'r1', name: 'Server' },
+                categories: serverMenu,
+            },
+            {
+                restaurant: { _id: 'r1', name: 'Local', _pendingSync: true },
+                categories: [],
+            },
+            { isProtected: true },
+        );
+
+        expect(merged.restaurant.name).toBe('Local');
+        expect(merged.categories).toEqual(serverMenu);
+    });
 });

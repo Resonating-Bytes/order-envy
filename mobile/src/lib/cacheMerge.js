@@ -81,10 +81,18 @@ export function applyListSyncResponse(serverData = {}, cachedData = {}, protecte
     return mergeRestaurantListFromServer(serverData, cachedData, protectedIds);
 }
 
+function nonEmptyMenu(value) {
+    return Array.isArray(value) && value.length > 0 ? value : null;
+}
+
 export function mergeRestaurantDetailFromServer(serverDetail, cachedDetail, { isProtected = false } = {}) {
     if (!isProtected || !cachedDetail) {
         return serverDetail;
     }
+    const cachedMenu = nonEmptyMenu(cachedDetail.menuByCategory)
+        || nonEmptyMenu(cachedDetail.categories);
+    const serverMenu = nonEmptyMenu(serverDetail?.menuByCategory)
+        || nonEmptyMenu(serverDetail?.categories);
     return {
         ...serverDetail,
         ...cachedDetail,
@@ -94,9 +102,7 @@ export function mergeRestaurantDetailFromServer(serverDetail, cachedDetail, { is
             _pendingSync: cachedDetail?.restaurant?._pendingSync
                 || serverDetail?.restaurant?._pendingSync,
         },
-        menuByCategory: cachedDetail.menuByCategory || serverDetail.menuByCategory,
-        categories: cachedDetail.categories || cachedDetail.menuByCategory
-            || serverDetail.categories
-            || serverDetail.menuByCategory,
+        menuByCategory: cachedMenu || serverMenu,
+        categories: cachedMenu || serverMenu,
     };
 }

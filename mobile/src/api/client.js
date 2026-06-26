@@ -107,10 +107,11 @@ async function refreshTokens(refreshToken) {
 }
 
 export async function remoteApiFetch(path, options = {}, retry = true) {
+    const { _remoteOnly, ...fetchOptions } = options;
     const tokens = await getStoredTokens();
     const headers = {
         'Content-Type': 'application/json',
-        ...(options.headers || {}),
+        ...(fetchOptions.headers || {}),
     };
 
     if (tokens?.accessToken) {
@@ -118,7 +119,7 @@ export async function remoteApiFetch(path, options = {}, retry = true) {
     }
 
     const response = await fetch(`${API_BASE_URL}${path}`, {
-        ...options,
+        ...fetchOptions,
         headers,
     });
 
@@ -126,9 +127,9 @@ export async function remoteApiFetch(path, options = {}, retry = true) {
         try {
             const refreshed = await refreshTokens(tokens.refreshToken);
             return remoteApiFetch(path, {
-                ...options,
+                ...fetchOptions,
                 headers: {
-                    ...(options.headers || {}),
+                    ...(fetchOptions.headers || {}),
                     Authorization: `Bearer ${refreshed.accessToken}`,
                 },
             }, false);
@@ -294,7 +295,10 @@ export async function fetchRestaurants({ lat, long, filterDist } = {}) {
             const cached = await getCacheEntry(path, { allowStale: true, touch: false });
             const locals = await listPendingLocalRestaurants();
             if (cached?.data || locals.length) {
-                return mergeRestaurantListData(cached?.data || { restaurants: [] }, locals);
+                return mergeRestaurantListData(
+                    cached?.data || { restaurants: [], recommendations: [] },
+                    locals,
+                );
             }
         }
         throw err;

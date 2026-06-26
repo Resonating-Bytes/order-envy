@@ -127,7 +127,8 @@ export default function RestaurantDetailScreen({ route, navigation }) {
         );
     }
 
-    const { restaurant, categories, recommendations = [] } = data;
+    const { restaurant, recommendations = [] } = data;
+    const categories = data.categories || [];
     const canEdit = data.canEdit !== false;
     const displayRating = getDisplayRestaurantRating({
         restaurant,
