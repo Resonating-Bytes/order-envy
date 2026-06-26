@@ -11,8 +11,13 @@ router.get('/meta/ratings', (req, res) => {
 });
 
 router.get('/', asyncHandler(async (req, res) => {
-    const { lat, long, filterDist } = req.query;
-    const result = await restaurantService.listRestaurants(req.user || null, { lat, long, filterDist });
+    const { lat, long, filterDist, since } = req.query;
+    const result = await restaurantService.listRestaurants(req.user || null, {
+        lat,
+        long,
+        filterDist,
+        since,
+    });
     sendJson(res, 200, result);
 }));
 

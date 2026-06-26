@@ -1,5 +1,6 @@
 import { AppState } from 'react-native';
 import { drainOutbox } from './offlineWrites';
+import { pullBeforeFlush } from './syncPull';
 import { canUseRemoteWrite, getCachedCompatibility } from './compatibility';
 import {
     getIsOnline,
@@ -87,6 +88,12 @@ export async function flushOutbox() {
             clearRetry();
             notifyState();
             return { flushed: 0, remaining: 0, failed: false };
+        }
+
+        try {
+            await pullBeforeFlush(remoteFetchImpl);
+        } catch {
+            // Pull is best-effort; outbox flush still runs with cached merge rules.
         }
 
         const result = await drainOutbox(remoteFetchImpl);

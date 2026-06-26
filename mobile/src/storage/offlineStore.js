@@ -7,6 +7,7 @@ const KEYS = {
     outbox: 'orderenvy_offline_outbox',
     localEntities: 'orderenvy_offline_entities',
     idMap: 'orderenvy_offline_id_map',
+    syncMeta: 'orderenvy_offline_sync',
 };
 
 const fetchMetaListeners = new Set();
@@ -63,20 +64,70 @@ export async function ensureOfflineSchema() {
 }
 
 export async function getCache(path) {
+    return getCacheEntry(path, { allowStale: false });
+}
+
+export async function getCacheEntry(path, { allowStale = false, touch = true } = {}) {
     const cache = await readJson(KEYS.cache, {});
     const entry = cache[path];
     if (!entry) return null;
-    if (Date.now() - entry.cachedAt > CACHE_MAX_AGE_MS) return null;
+    const ageMs = Date.now() - (entry.lastAccessedAt || entry.cachedAt);
+    if (!allowStale && ageMs > CACHE_MAX_AGE_MS) return null;
+    if (touch) {
+        entry.lastAccessedAt = Date.now();
+        await writeJson(KEYS.cache, cache);
+    }
     return entry;
 }
 
-export async function setCache(path, data) {
-    const cache = await readJson(KEYS.cache, {});
-    cache[path] = {
+function buildCacheEntry(path, data, meta = {}) {
+    const now = Date.now();
+    const entry = {
         data,
-        cachedAt: Date.now(),
+        cachedAt: now,
+        lastAccessedAt: now,
+        ...meta,
     };
+
+    if (meta.lat == null || meta.long == null) {
+        const detailMatch = path.match(/^\/restaurants\/([^/?]+)$/);
+        if (detailMatch && data?.restaurant?.location) {
+            const { lat, long } = data.restaurant.location;
+            if (lat != null && long != null) {
+                entry.lat = Number(lat);
+                entry.long = Number(long);
+            }
+        }
+    }
+
+    return entry;
+}
+
+export async function setCache(path, data, meta = {}) {
+    const cache = await readJson(KEYS.cache, {});
+    cache[path] = buildCacheEntry(path, data, meta);
     await writeJson(KEYS.cache, cache);
+}
+
+export async function removeCachePath(path) {
+    const cache = await readJson(KEYS.cache, {});
+    if (!cache[path]) return false;
+    delete cache[path];
+    await writeJson(KEYS.cache, cache);
+    return true;
+}
+
+export async function getSyncMeta() {
+    return readJson(KEYS.syncMeta, {
+        lastSyncedAt: null,
+        lastLat: null,
+        lastLong: null,
+    });
+}
+
+export async function setSyncMeta(patch) {
+    const current = await getSyncMeta();
+    await writeJson(KEYS.syncMeta, { ...current, ...patch });
 }
 
 export async function readCacheMap() {
@@ -202,5 +253,6 @@ export async function clearOfflineData() {
         KEYS.outbox,
         KEYS.localEntities,
         KEYS.idMap,
+        KEYS.syncMeta,
     ]);
 }

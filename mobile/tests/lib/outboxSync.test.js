@@ -1,4 +1,5 @@
 const mockDrainOutbox = jest.fn();
+const mockPullBeforeFlush = jest.fn();
 const mockGetOutbox = jest.fn(() => Promise.resolve([]));
 const mockCanUseRemoteWrite = jest.fn(() => true);
 const mockGetCachedCompatibility = jest.fn(() => ({}));
@@ -9,6 +10,10 @@ const mockSubscribeNetwork = jest.fn(() => jest.fn());
 
 jest.mock('../../src/lib/offlineWrites', () => ({
     drainOutbox: (...args) => mockDrainOutbox(...args),
+}));
+
+jest.mock('../../src/lib/syncPull', () => ({
+    pullBeforeFlush: (...args) => mockPullBeforeFlush(...args),
 }));
 
 jest.mock('../../src/storage/offlineStore', () => ({
@@ -46,6 +51,7 @@ describe('outboxSync', () => {
         mockIsNetworkOnline.mockResolvedValue(true);
         mockGetOutbox.mockResolvedValue([]);
         mockDrainOutbox.mockResolvedValue({ flushed: 0, remaining: 0, failed: false });
+        mockPullBeforeFlush.mockResolvedValue({ pulled: false });
 
         ({ flushOutbox, startOutboxSync } = require('../../src/lib/outboxSync'));
         stopOutboxSync = startOutboxSync({
@@ -54,7 +60,8 @@ describe('outboxSync', () => {
         });
         await flushOutbox();
         mockDrainOutbox.mockClear();
-        mockGetOutbox.mockClear();
+        mockPullBeforeFlush.mockClear();
+        mockGetOutbox.mockResolvedValue([]);
     });
 
     afterEach(() => {
@@ -62,7 +69,8 @@ describe('outboxSync', () => {
     });
 
     test('is single-flight while a flush is in progress', async () => {
-        mockGetOutbox.mockResolvedValue([{ id: 'q1' }]);
+        mockGetOutbox.mockImplementation(() => Promise.resolve([{ id: 'q1' }]));
+        mockPullBeforeFlush.mockImplementation(() => Promise.resolve({ pulled: false }));
         let resolveDrain;
         let drainCalls = 0;
         mockDrainOutbox.mockImplementation(() => {
@@ -75,8 +83,8 @@ describe('outboxSync', () => {
         const first = flushOutbox();
         const second = flushOutbox();
 
-        await Promise.resolve();
-        await Promise.resolve();
+        await new Promise((resolve) => setImmediate(resolve));
+        expect(mockPullBeforeFlush).toHaveBeenCalledTimes(1);
         expect(drainCalls).toBe(1);
 
         resolveDrain({ flushed: 1, remaining: 0, failed: false });
@@ -109,6 +117,18 @@ describe('outboxSync', () => {
         const result = await flushOutbox();
 
         expect(mockDrainOutbox).not.toHaveBeenCalled();
+        expect(mockPullBeforeFlush).not.toHaveBeenCalled();
         expect(result.blocked).toBe(true);
+    });
+
+    test('pulls regional snapshot before draining outbox', async () => {
+        mockGetOutbox.mockResolvedValue([{ id: 'q1' }]);
+        mockPullBeforeFlush.mockResolvedValue({ pulled: true });
+        mockDrainOutbox.mockResolvedValue({ flushed: 1, remaining: 0, failed: false });
+
+        await flushOutbox();
+
+        expect(mockPullBeforeFlush).toHaveBeenCalledTimes(1);
+        expect(mockDrainOutbox).toHaveBeenCalledTimes(1);
     });
 });

@@ -3,7 +3,7 @@ const Recommendation = require('../models/recommendation');
 const Note = require('../models/note');
 const List = require('../models/list');
 const User = require('../models/user');
-const { averageRating, filterByDistance, getUserRestaurantRating } = require('../lib/apiHelpers');
+const { averageRating, filterByDistance, getUserRestaurantRating, parseSinceMs } = require('../lib/apiHelpers');
 const {
     userCanEditRestaurant,
     userCanDeleteRestaurant,
@@ -34,8 +34,13 @@ function groupMenuByCategory(restaurant) {
     })).filter((group) => group.menuItems.length > 0);
 }
 
-async function listRestaurants(user, { lat, long, filterDist = 25 } = {}) {
-    let query = Restaurant.find({}).sort('name');
+async function listRestaurants(user, { lat, long, filterDist = 25, since } = {}) {
+    const sinceMs = parseSinceMs(since);
+    const isDelta = sinceMs != null;
+    const syncedAt = Date.now();
+
+    const filter = isDelta ? { updatedAt: { $gt: new Date(sinceMs) } } : {};
+    let query = Restaurant.find(filter).sort('name');
     if (user) {
         query = query
             .populate({ path: 'ratings' })
@@ -81,7 +86,12 @@ async function listRestaurants(user, { lat, long, filterDist = 25 } = {}) {
         });
     }
 
-    return { restaurants, recommendations };
+    return {
+        mode: isDelta ? 'delta' : 'full',
+        syncedAt,
+        restaurants,
+        recommendations,
+    };
 }
 
 async function getRestaurant(restaurantId, user) {

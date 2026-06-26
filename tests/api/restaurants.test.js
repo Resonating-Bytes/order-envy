@@ -77,6 +77,51 @@ describe('API v1 restaurants', () => {
             expect(res.status).toBe(200);
             expect(res.body.restaurants[0].userAverageRating).toBe(5);
         });
+
+        it('returns syncedAt on list responses', async () => {
+            await request(app)
+                .post('/api/v1/restaurants')
+                .set(bearerHeader(auth.accessToken))
+                .send({ name: 'Sync Cafe' });
+
+            const res = await request(app).get('/api/v1/restaurants');
+
+            expect(res.status).toBe(200);
+            expect(res.body.mode).toBe('full');
+            expect(typeof res.body.syncedAt).toBe('number');
+        });
+
+        it('returns delta rows when since watermark is provided', async () => {
+            const first = await request(app)
+                .post('/api/v1/restaurants')
+                .set(bearerHeader(auth.accessToken))
+                .send({ name: 'Alpha Diner', lat: 40.0, long: -105.0 });
+
+            await request(app)
+                .post('/api/v1/restaurants')
+                .set(bearerHeader(auth.accessToken))
+                .send({ name: 'Beta Grill', lat: 40.01, long: -105.01 });
+
+            const full = await request(app)
+                .get('/api/v1/restaurants')
+                .set(bearerHeader(auth.accessToken));
+
+            const since = full.body.syncedAt;
+
+            await request(app)
+                .put(`/api/v1/restaurants/${first.body.restaurant._id}`)
+                .set(bearerHeader(auth.accessToken))
+                .send({ name: 'Alpha Diner Updated' });
+
+            const delta = await request(app)
+                .get(`/api/v1/restaurants?since=${since}`)
+                .set(bearerHeader(auth.accessToken));
+
+            expect(delta.status).toBe(200);
+            expect(delta.body.mode).toBe('delta');
+            expect(delta.body.restaurants).toHaveLength(1);
+            expect(delta.body.restaurants[0].name).toBe('Alpha Diner Updated');
+        });
     });
 
     describe('POST /api/v1/restaurants', () => {

@@ -13,7 +13,9 @@ import {
     getOutboxSyncSnapshot,
     startOutboxSync,
 } from '../lib/outboxSync';
+import { evictRegionalCache } from '../lib/cachePolicy';
 import { getIsOnline, initNetworkStatus, subscribeOnlineStatus } from '../lib/network';
+import * as offlineStore from '../storage/offlineStore';
 import {
     ensureOfflineSchema,
     getOutbox,
@@ -57,6 +59,7 @@ export function NetworkProvider({ children, remoteFetch }) {
 
         (async () => {
             await ensureOfflineSchema();
+            await evictRegionalCache(offlineStore);
             if (!cancelled) {
                 await refreshPendingCount();
             }

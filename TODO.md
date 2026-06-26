@@ -19,7 +19,7 @@
 - [x] Offline mode — read cache, write queue, auto-sync, cache repair on sync, logout cleanup *(phase 2: conflict handling / friends offline writes deferred)*
 - [x] Settings screen — replace main-header logout with a gear icon; move log out (and account/profile actions) into settings
 - [ ] Friend activity feed on friend profile
-- [ ] **Incremental sync (local-first refresh)** — strengthen local-first without blocking UI. **List:** on load, show restaurants from local storage immediately; in background, call backend with last-sync timestamp; backend returns restaurant IDs (or full records if payload is acceptable) added/updated since then; app fetches any missing detail and merges into local store, then updates the visible list. **Detail:** same pattern for menu items when opening a restaurant — render cached data first, refresh menu in background when online. Builds on existing AsyncStorage cache/outbox; may evolve toward a structured local DB if needed.
+- [x] **Incremental sync (local-first refresh)** — shipped in 1.0.5
 
 ## Web (future)
 - [ ] **Desktop / full-screen web usability pass** — layouts and typography were tuned for narrow mobile form factor; editor management, friends, and other pages render with oversized text and stretched controls on desktop. Add responsive breakpoints, sensible max-width containers, and scale headings/buttons for full-screen browser use.
