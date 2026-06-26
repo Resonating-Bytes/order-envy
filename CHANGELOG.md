@@ -4,6 +4,23 @@ All notable changes to the Order Envy mobile app are documented here.
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-06-24
+
+### Added
+- Local-first restaurant list and detail: show cache immediately, refresh in background when online
+- Regional offline cache with TTL and distance eviction; pull-before-flush before outbox sync
+- API restaurant list `since` watermark for delta sync when cache is warm
+
+### Changed
+- Pending local edits win over server data during cache merge
+
+### Fixed
+- Background list/detail refresh merges server data with protected pending edits instead of overwriting cache
+- Protected detail sync keeps server menu when cached menu is empty (metadata-only local edits)
+- List and detail fetch fall back to stale cache on transient network failure when online
+- Read-only cached loads no longer reset regional cache eviction timers
+- First-load network failures no longer surface as unhandled promise rejections
+
 ## [1.0.4] - 2026-06-23
 
 ### Added

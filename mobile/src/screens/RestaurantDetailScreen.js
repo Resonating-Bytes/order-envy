@@ -7,7 +7,8 @@ import {
     View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { fetchRatingMeta, fetchRestaurant } from '../api/client';
+import { fetchRatingMeta, fetchRestaurant, fetchRestaurantCached } from '../api/client';
+import { loadLocalFirst } from '../lib/localFirst';
 import EditHeaderButton from '../components/EditHeaderButton';
 import RecommendationsSection from '../components/RecommendationsSection';
 import LoadingView from '../components/LoadingView';
@@ -45,24 +46,18 @@ export default function RestaurantDetailScreen({ route, navigation }) {
     const userId = user?.id || user?._id;
 
     const loadRestaurant = useCallback(async ({ silent = false } = {}) => {
-        setError('');
-        if (!silent) {
-            setLoading(true);
-        } else {
-            setRefreshing(true);
-        }
-
         try {
-            const result = await fetchRestaurant(restaurantId);
-            setData(result);
-        } catch (err) {
-            setError(err.message || 'Failed to load restaurant');
-        } finally {
-            if (!silent) {
-                setLoading(false);
-            } else {
-                setRefreshing(false);
-            }
+            await loadLocalFirst({
+                getCached: () => fetchRestaurantCached(restaurantId),
+                fetchFresh: () => fetchRestaurant(restaurantId),
+                apply: setData,
+                setLoading: silent ? undefined : setLoading,
+                setRefreshing: silent ? setRefreshing : undefined,
+                setError,
+                silent,
+            });
+        } catch {
+            // loadLocalFirst already surfaced the error when no cache was available
         }
     }, [restaurantId]);
 
@@ -136,7 +131,8 @@ export default function RestaurantDetailScreen({ route, navigation }) {
         );
     }
 
-    const { restaurant, categories, recommendations = [] } = data;
+    const { restaurant, recommendations = [] } = data;
+    const categories = data.categories || [];
     const canEdit = data.canEdit !== false;
     const displayRating = getDisplayRestaurantRating({
         restaurant,

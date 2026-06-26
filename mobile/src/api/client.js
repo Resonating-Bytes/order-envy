@@ -17,9 +17,18 @@ import { isLocalId } from '../lib/offlineIds';
 import {
     emitFetchMeta,
     getCache,
+    getCacheEntry,
+    getLocalEntities,
+    getOutbox,
+    getSyncMeta,
     setCache,
+    setSyncMeta,
 } from '../storage/offlineStore';
 import { getRatingOptions } from '../utils/ratings';
+import { buildRestaurantsListPath } from '../utils/restaurantApiPaths';
+import { getProtectedRestaurantIds } from '../lib/cachePolicy';
+import { mergeRestaurantDetailFromServer } from '../lib/cacheMerge';
+import { fetchAndMergeRestaurantList } from '../lib/listSync';
 
 export class ApiError extends Error {
     constructor(message, status, extras = {}) {
@@ -44,11 +53,35 @@ function isNetworkFailure(err) {
     return isNetworkFailureError(err);
 }
 
+function cacheMetaForGetPath(path) {
+    if (!path.startsWith('/restaurants?')) return {};
+
+    const query = path.slice(path.indexOf('?') + 1);
+    const params = new URLSearchParams(query);
+    const lat = params.get('lat');
+    const long = params.get('long');
+    if (lat == null || long == null) return {};
+
+    const queryLat = Number(lat);
+    const queryLong = Number(long);
+    if (Number.isNaN(queryLat) || Number.isNaN(queryLong)) return {};
+
+    return { queryLat, queryLong };
+}
+
 async function readCachedGet(path) {
     const cached = await getCache(path);
     if (!cached) return null;
     emitFetchMeta({ path, fromCache: true, cachedAt: cached.cachedAt });
     return cached.data;
+}
+
+async function writeCachedGet(path, data) {
+    const meta = cacheMetaForGetPath(path);
+    if (meta.queryLat != null && meta.queryLong != null) {
+        await setSyncMeta({ lastLat: meta.queryLat, lastLong: meta.queryLong });
+    }
+    await setCache(path, data, meta);
 }
 
 async function refreshTokens(refreshToken) {
@@ -74,10 +107,11 @@ async function refreshTokens(refreshToken) {
 }
 
 export async function remoteApiFetch(path, options = {}, retry = true) {
+    const { _remoteOnly, ...fetchOptions } = options;
     const tokens = await getStoredTokens();
     const headers = {
         'Content-Type': 'application/json',
-        ...(options.headers || {}),
+        ...(fetchOptions.headers || {}),
     };
 
     if (tokens?.accessToken) {
@@ -85,7 +119,7 @@ export async function remoteApiFetch(path, options = {}, retry = true) {
     }
 
     const response = await fetch(`${API_BASE_URL}${path}`, {
-        ...options,
+        ...fetchOptions,
         headers,
     });
 
@@ -93,9 +127,9 @@ export async function remoteApiFetch(path, options = {}, retry = true) {
         try {
             const refreshed = await refreshTokens(tokens.refreshToken);
             return remoteApiFetch(path, {
-                ...options,
+                ...fetchOptions,
                 headers: {
-                    ...(options.headers || {}),
+                    ...(fetchOptions.headers || {}),
                     Authorization: `Bearer ${refreshed.accessToken}`,
                 },
             }, false);
@@ -150,7 +184,7 @@ export async function apiFetch(path, options = {}, retry = true) {
     try {
         const data = await remoteApiFetch(path, options, retry);
         if (method === 'GET') {
-            await setCache(path, data);
+            await writeCachedGet(path, data);
             emitFetchMeta({ path, fromCache: false });
         }
         return data;
@@ -210,34 +244,74 @@ export async function logout() {
     await clearSession();
 }
 
-export async function fetchRestaurants({ lat, long, filterDist } = {}) {
-    const params = new URLSearchParams();
-
-    if (filterDist === 'all') {
-        params.set('filterDist', 'all');
-    } else if (lat != null && long != null && filterDist != null) {
-        params.set('lat', String(lat));
-        params.set('long', String(long));
-        params.set('filterDist', String(filterDist));
+export async function fetchRestaurantsCached(params = {}) {
+    const path = buildRestaurantsListPath(params);
+    const entry = await getCacheEntry(path, { allowStale: true, touch: false });
+    const locals = await listPendingLocalRestaurants();
+    if (!entry?.data && !locals.length) {
+        return null;
     }
+    return mergeRestaurantListData(entry?.data || { restaurants: [], recommendations: [] }, locals);
+}
 
-    const query = params.toString();
-    const path = `/restaurants${query ? `?${query}` : ''}`;
+export async function fetchRestaurants({ lat, long, filterDist } = {}) {
+    const path = buildRestaurantsListPath({ lat, long, filterDist });
 
     try {
+        if (getIsOnline()) {
+            const [syncMeta, cachedEntry, outbox, localEntities] = await Promise.all([
+                getSyncMeta(),
+                getCacheEntry(path, { allowStale: true, touch: false }),
+                getOutbox(),
+                getLocalEntities(),
+            ]);
+            const protectedIds = getProtectedRestaurantIds(outbox, localEntities);
+            const { merged, syncedAt } = await fetchAndMergeRestaurantList({
+                remoteFetch: remoteApiFetch,
+                lat,
+                long,
+                filterDist,
+                cachedData: cachedEntry?.data || {},
+                protectedIds,
+                syncMeta,
+            });
+            await writeCachedGet(path, merged);
+            const syncPatch = { lastSyncedAt: syncedAt };
+            if (lat != null && long != null) {
+                syncPatch.lastLat = Number(lat);
+                syncPatch.lastLong = Number(long);
+            }
+            await setSyncMeta(syncPatch);
+            emitFetchMeta({ path, fromCache: false });
+            const locals = await listPendingLocalRestaurants();
+            return mergeRestaurantListData(merged, locals);
+        }
+
         const data = await apiFetch(path);
         const locals = await listPendingLocalRestaurants();
         return mergeRestaurantListData(data, locals);
     } catch (err) {
-        if (err.offline) {
-            const cached = await getCache(path);
+        if (err.offline || isNetworkFailure(err)) {
+            const cached = await getCacheEntry(path, { allowStale: true, touch: false });
             const locals = await listPendingLocalRestaurants();
             if (cached?.data || locals.length) {
-                return mergeRestaurantListData(cached?.data || { restaurants: [] }, locals);
+                return mergeRestaurantListData(
+                    cached?.data || { restaurants: [], recommendations: [] },
+                    locals,
+                );
             }
         }
         throw err;
     }
+}
+
+export async function fetchRestaurantCached(restaurantId) {
+    const resolvedId = await resolveRestaurantIdForRead(restaurantId);
+    if (isLocalId(resolvedId)) {
+        return getLocalRestaurantResponse(resolvedId);
+    }
+    const entry = await getCacheEntry(`/restaurants/${resolvedId}`, { allowStale: true, touch: false });
+    return entry?.data || null;
 }
 
 export async function fetchRestaurant(restaurantId) {
@@ -246,7 +320,36 @@ export async function fetchRestaurant(restaurantId) {
         const local = await getLocalRestaurantResponse(resolvedId);
         if (local) return local;
     }
-    return apiFetch(`/restaurants/${resolvedId}`);
+
+    const path = `/restaurants/${resolvedId}`;
+
+    try {
+        if (getIsOnline()) {
+            const [cachedEntry, outbox, localEntities] = await Promise.all([
+                getCacheEntry(path, { allowStale: true, touch: false }),
+                getOutbox(),
+                getLocalEntities(),
+            ]);
+            const protectedIds = getProtectedRestaurantIds(outbox, localEntities);
+            const serverData = await remoteApiFetch(path, { _remoteOnly: true });
+            const merged = mergeRestaurantDetailFromServer(
+                serverData,
+                cachedEntry?.data,
+                { isProtected: protectedIds.has(String(resolvedId)) },
+            );
+            await writeCachedGet(path, merged);
+            emitFetchMeta({ path, fromCache: false });
+            return merged;
+        }
+
+        return apiFetch(path);
+    } catch (err) {
+        if (err.offline || isNetworkFailure(err)) {
+            const cached = await getCacheEntry(path, { allowStale: true, touch: false });
+            if (cached?.data) return cached.data;
+        }
+        throw err;
+    }
 }
 
 export { isOfflineQueuedResult };

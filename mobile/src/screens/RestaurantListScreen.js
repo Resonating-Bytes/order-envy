@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchRestaurants, fetchRatingMeta } from '../api/client';
+import { fetchRestaurants, fetchRestaurantsCached, fetchRatingMeta } from '../api/client';
+import { loadLocalFirst } from '../lib/localFirst';
 import DropdownPicker from '../components/DropdownPicker';
 import LoadingView from '../components/LoadingView';
 import SettingsHeaderButton from '../components/SettingsHeaderButton';
@@ -172,9 +173,8 @@ export default function RestaurantListScreen({ navigation }) {
         nextFilterDist = filterDist,
         nextCoords = coords,
         refreshLocation = false,
+        silent = false,
     } = {}) => {
-        setError('');
-
         let activeCoords = nextCoords;
         if (refreshLocation || !activeCoords) {
             const location = await requestCurrentLocation();
@@ -193,14 +193,14 @@ export default function RestaurantListScreen({ navigation }) {
             }
         }
 
-        try {
-            const useLocationFilter = activeCoords && nextFilterDist !== 'all';
-            const data = await fetchRestaurants({
-                lat: useLocationFilter ? activeCoords.lat : undefined,
-                long: useLocationFilter ? activeCoords.long : undefined,
-                filterDist: nextFilterDist,
-            });
+        const useLocationFilter = activeCoords && nextFilterDist !== 'all';
+        const fetchParams = {
+            lat: useLocationFilter ? activeCoords.lat : undefined,
+            long: useLocationFilter ? activeCoords.long : undefined,
+            filterDist: nextFilterDist,
+        };
 
+        const applyListData = (data) => {
             const rawList = data.restaurants || [];
             setRecommendations(data.recommendations || []);
 
@@ -218,14 +218,25 @@ export default function RestaurantListScreen({ navigation }) {
             enrichRestaurantsFromDetails(rawList, userId)
                 .then(setRestaurants)
                 .catch(() => {});
-        } catch (err) {
-            setError(err.message || 'Failed to load restaurants');
+        };
+
+        try {
+            await loadLocalFirst({
+                getCached: () => fetchRestaurantsCached(fetchParams),
+                fetchFresh: () => fetchRestaurants(fetchParams),
+                apply: applyListData,
+                setLoading: silent ? undefined : setLoading,
+                setRefreshing: silent ? setRefreshing : undefined,
+                setError,
+                silent,
+            });
+        } catch {
+            // loadLocalFirst already surfaced the error when no cache was available
         }
     }, [coords, filterDist, userId]);
 
     React.useEffect(() => {
         loadRestaurants({ refreshLocation: true }).finally(() => {
-            setLoading(false);
             hasLoadedRef.current = true;
         });
     }, []);
@@ -233,13 +244,13 @@ export default function RestaurantListScreen({ navigation }) {
     useFocusEffect(
         useCallback(() => {
             if (!hasLoadedRef.current) return undefined;
-            loadRestaurants({ refreshLocation: false });
+            loadRestaurants({ refreshLocation: false, silent: true });
             return undefined;
         }, [loadRestaurants])
     );
 
     useOutboxSyncRefresh(() => {
-        loadRestaurants({ refreshLocation: false });
+        loadRestaurants({ refreshLocation: false, silent: true });
     });
 
     React.useEffect(() => {
@@ -255,9 +266,7 @@ export default function RestaurantListScreen({ navigation }) {
     }, [coords, sortBy]);
 
     const handleRefresh = useCallback(async () => {
-        setRefreshing(true);
-        await loadRestaurants({ refreshLocation: true });
-        setRefreshing(false);
+        await loadRestaurants({ refreshLocation: true, silent: true });
     }, [loadRestaurants]);
 
     const handleFilterChange = useCallback(async (value) => {
