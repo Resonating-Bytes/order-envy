@@ -14,6 +14,13 @@ All notable changes to the Order Envy mobile app are documented here.
 ### Changed
 - Pending local edits win over server data during cache merge
 
+### Fixed
+- Background list/detail refresh merges server data with protected pending edits instead of overwriting cache
+- Protected detail sync keeps server menu when cached menu is empty (metadata-only local edits)
+- List and detail fetch fall back to stale cache on transient network failure when online
+- Read-only cached loads no longer reset regional cache eviction timers
+- First-load network failures no longer surface as unhandled promise rejections
+
 ## [1.0.4] - 2026-06-23
 
 ### Added
